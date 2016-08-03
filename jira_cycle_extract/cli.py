@@ -2,6 +2,7 @@ import argparse
 import getpass
 import json
 import datetime
+import base64
 
 import dateutil.parser
 
@@ -74,8 +75,13 @@ if charting.HAVE_CHARTING:
 
 def get_jira_client(connection):
     url = connection['domain']
-    username = connection['username']
-    password = connection['password']
+
+    token = connection['token']
+    if token:
+        username, password = base64.b64decode(token).decode('utf-8').split(':')
+    else:
+        username = connection['username']
+        password = connection['password']
 
     print "Connecting to", url
 
