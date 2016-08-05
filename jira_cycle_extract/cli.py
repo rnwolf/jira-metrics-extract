@@ -21,6 +21,7 @@ parser.add_argument('output', metavar='data.csv', nargs='?', help='Output file. 
 parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
 parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues')
 parser.add_argument('--format', metavar='csv|json|xlsx', help="Output format for data (default CSV)")
+parser.add_argument('--records', metavar='records.json', help="All the ouptut data for issues as JSON records instead of arrays.")
 parser.add_argument('--cfd', metavar='cfd.csv', help='Calculate data to draw a Cumulative Flow Diagram and write to file. Hint: Plot as a (non-stacked) area chart.')
 parser.add_argument('--scatterplot', metavar='scatterplot.csv', help='Calculate data to draw a cycle time scatter plot and write to file. Hint: Plot as a scatter chart.')
 parser.add_argument('--histogram', metavar='histogram.csv', help='Calculate data to draw a cycle time histogram and write to file. Hint: Plot as a column chart.')
@@ -179,6 +180,13 @@ def main():
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
             cycle_data.to_csv(args.output, columns=columns, header=header, date_format='%Y-%m-%d', index=False)
+
+    if args.records:
+        if output_format == 'json':
+            print "Writing cycle data as JSON records"
+            cycle_data.to_json(args.records, date_format='iso', orient='records')
+        else:
+            print "Warning: Ignoring cycle data as JSON records. Use --format json"
 
     if args.cfd:
         print "Writing Cumulative Flow Diagram data to", args.cfd
