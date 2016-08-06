@@ -142,7 +142,7 @@ class CycleTimeQueries(QueryManager):
                     snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
                     if snapshot_cycle_step is None:
                         if verbose:
-                            print issue.key, "transitioned to unknown JIRA status", snapshot.status
+                            print(issue.key, "transitioned to unknown JIRA status", snapshot.status)
                         continue
 
                     snapshot_cycle_step_name = snapshot_cycle_step['name']
@@ -159,7 +159,7 @@ class CycleTimeQueries(QueryManager):
                             continue
                         elif found_cycle_name and item[cycle_name] is not None:
                             if verbose:
-                                print issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name
+                                print(issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name)
                             item[cycle_name] = None
 
                 # Wipe timestamps if items have moved backwards; calculate cycle time

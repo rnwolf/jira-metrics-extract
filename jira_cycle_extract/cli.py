@@ -1,19 +1,27 @@
+from __future__ import print_function
 import argparse
 import getpass
 import json
 import datetime
 import base64
+import sys
 
 import dateutil.parser
 
 import numpy as np
 import pandas as pd
 
-from jira import JIRA
+from jira import JIRA, JIRAError
+JIRAError.log_to_tempfile = False
 
 from .config import config_to_options
 from .cycletime import CycleTimeQueries
 from . import charting
+
+def eprint(*args, **kwargs):
+    """Print to stderr
+    """
+    print(*args, file=sys.stderr, **kwargs)
 
 parser = argparse.ArgumentParser(description='Extract cycle time analytics data from JIRA.')
 parser.add_argument('config', metavar='config.yml', help='Configuration file')
@@ -84,7 +92,7 @@ def get_jira_client(connection):
         username = connection['username']
         password = connection['password']
 
-    print "Connecting to", url
+    print("Connecting to ", url)
 
     if not username:
         username = raw_input("Username: ")
@@ -128,7 +136,7 @@ def main():
         try:
             quantiles = [float(s.strip()) for s in args.quantiles.split(',')]
         except (AttributeError, ValueError,):
-            print "Invalid value for --quantiles"
+            print("Invalid value for --quantiles")
             args.print_usage()
             return
 
@@ -139,12 +147,17 @@ def main():
 
     # Query JIRA
 
-    jira = get_jira_client(options['connection'])
+    try:
+        jira = get_jira_client(options['connection'])
 
-    q = CycleTimeQueries(jira, **options['settings'])
+        q = CycleTimeQueries(jira, **options['settings'])
 
-    print "Fetching issues (this could take some time)"
-    cycle_data = q.cycle_data(verbose=args.verbose)
+        print("Fetching issues (this could take some time)")
+        cycle_data = q.cycle_data(verbose=args.verbose)
+    except JIRAError, e:
+        eprint(e) 
+        return 1
+
 
     cfd_data = q.cfd(cycle_data)
     scatter_data = q.scatterplot(cycle_data)
@@ -167,7 +180,7 @@ def main():
     # Write files
 
     if args.output:
-        print "Writing cycle data to", args.output
+        print("Writing cycle data to", args.output)
 
         header = ['ID', 'Link', 'Name'] + cycle_names + ['Type', 'Status', 'Resolution'] + field_names + query_attribute_names
         columns = ['key', 'url', 'summary'] + cycle_names + ['issue_type', 'status', 'resolution'] + field_names + query_attribute_names
@@ -183,13 +196,13 @@ def main():
 
     if args.records:
         if output_format == 'json':
-            print "Writing cycle data as JSON records"
+            print("Writing cycle data as JSON records")
             cycle_data.to_json(args.records, date_format='iso', orient='records')
         else:
-            print "Warning: Ignoring cycle data as JSON records. Use --format json"
+            print("Warning: Ignoring cycle data as JSON records. Use --format json")
 
     if args.cfd:
-        print "Writing Cumulative Flow Diagram data to", args.cfd
+        print("Writing Cumulative Flow Diagram data to", args.cfd)
         if output_format == 'json':
             cfd_data.to_json(args.cfd, date_format='iso')
         elif output_format == 'xlsx':
@@ -198,7 +211,7 @@ def main():
             cfd_data.to_csv(args.cfd)
 
     if args.scatterplot:
-        print "Writing cycle time scatter plot data to", args.scatterplot
+        print("Writing cycle time scatter plot data to", args.scatterplot)
         if output_format == 'json':
             scatter_data.to_json(args.scatterplot, date_format='iso')
         elif output_format == 'xlsx':
@@ -207,7 +220,7 @@ def main():
             scatter_data.to_csv(args.scatterplot, index=False)
 
     if args.percentiles:
-        print "Writing cycle time percentiles", args.percentiles
+        print("Writing cycle time percentiles", args.percentiles)
         if output_format == 'json':
             percentile_data.to_json(args.percentiles, date_format='iso')
         elif output_format == 'xlsx':
@@ -216,7 +229,7 @@ def main():
             percentile_data.to_csv(args.percentiles, header=True)
 
     if args.histogram:
-        print "Writing cycle time histogram data to", args.histogram
+        print("Writing cycle time histogram data to", args.histogram)
         if output_format == 'json':
             histogram_data.to_json(args.histogram, date_format='iso')
         elif output_format == 'xlsx':
@@ -225,7 +238,7 @@ def main():
             histogram_data.to_csv(args.histogram, header=True)
 
     if args.throughput:
-        print "Writing throughput data to", args.throughput
+        print("Writing throughput data to", args.throughput)
         if output_format == 'json':
             daily_throughput_data.to_json(args.throughput, date_format='iso')
         elif output_format == 'xlsx':
@@ -250,7 +263,7 @@ def main():
         charting.set_context()
 
         if args.charts_scatterplot:
-            print "Drawing scatterplot in", args.charts_scatterplot
+            print("Drawing scatterplot in", args.charts_scatterplot)
             charting.set_style('darkgrid')
             try:
                 ax = charting.cycle_time_scatterplot(
@@ -259,13 +272,13 @@ def main():
                     title=args.charts_scatterplot_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_scatterplot, bbox_inches='tight', dpi=300)
 
         if args.charts_histogram:
-            print "Drawing histogram in", args.charts_histogram
+            print("Drawing histogram in", args.charts_histogram)
             charting.set_style('darkgrid')
             try:
                 ax = charting.cycle_time_histogram(
@@ -274,13 +287,13 @@ def main():
                     title=args.charts_histogram_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_histogram, bbox_inches='tight', dpi=300)
 
         if args.charts_cfd:
-            print "Drawing CFD in", args.charts_cfd
+            print("Drawing CFD in", args.charts_cfd)
             charting.set_style('whitegrid')
             try:
                 ax = charting.cfd(
@@ -288,13 +301,13 @@ def main():
                     title=args.charts_cfd_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_cfd, bbox_inches='tight', dpi=300)
 
         if args.charts_throughput:
-            print "Drawing throughput chart in", args.charts_throughput
+            print("Drawing throughput chart in", args.charts_throughput)
             charting.set_style('darkgrid')
             try:
                 ax = charting.throughput_trend_chart(
@@ -302,13 +315,13 @@ def main():
                     title=args.charts_throughput_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_throughput, bbox_inches='tight', dpi=300)
 
         if args.charts_burnup:
-            print "Drawing burnup chart in", args.charts_burnup
+            print("Drawing burnup chart in", args.charts_burnup)
             charting.set_style('whitegrid')
             try:
                 ax = charting.burnup(
@@ -318,7 +331,7 @@ def main():
                     title=args.charts_burnup_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_burnup, bbox_inches='tight', dpi=300)
@@ -329,7 +342,7 @@ def main():
             deadline = dateutil.parser.parse(args.charts_burnup_forecast_deadline) if args.charts_burnup_forecast_deadline else None
             deadline_confidence = args.charts_burnup_forecast_deadline_confidence
             
-            print "Drawing burnup foreacst chart in", args.charts_burnup_forecast
+            print("Drawing burnup foreacst chart in", args.charts_burnup_forecast)
             charting.set_style('whitegrid')
             try:
                 ax = charting.burnup_forecast(
@@ -345,13 +358,13 @@ def main():
                     title=args.charts_burnup_forecast_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_burnup_forecast, bbox_inches='tight', dpi=300)
 
         if args.charts_wip:
-            print "Drawing WIP chart in", args.charts_wip
+            print("Drawing WIP chart in", args.charts_wip)
             charting.set_style('darkgrid')
             try:
                 ax = charting.wip_chart(
@@ -361,13 +374,13 @@ def main():
                     title=args.charts_wip_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_wip, bbox_inches='tight', dpi=300)
 
         if args.charts_ageing_wip:
-            print "Drawing ageing WIP chart in", args.charts_ageing_wip
+            print("Drawing ageing WIP chart in", args.charts_ageing_wip)
             charting.set_style('whitegrid')
             try:
                 ax = charting.ageing_wip_chart(
@@ -378,13 +391,13 @@ def main():
                     title=args.charts_ageing_wip_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_ageing_wip, bbox_inches='tight', dpi=300)
 
         if args.charts_net_flow:
-            print "Drawing net flow chart in", args.charts_net_flow
+            print("Drawing net flow chart in", args.charts_net_flow)
             charting.set_style('darkgrid')
             try:
                 ax = charting.net_flow_chart(
@@ -394,9 +407,9 @@ def main():
                     title=args.charts_net_flow_title
                 )
             except charting.UnchartableData, e:
-                print "** WARNING: Did not draw chart:", e
+                print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
                 fig.savefig(args.charts_net_flow, bbox_inches='tight', dpi=300)
 
-    print "Done"
+    print("Done")

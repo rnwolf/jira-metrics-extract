@@ -182,11 +182,11 @@ class QueryManager(object):
         queryString = "%s ORDER BY %s" % (' AND '.join(query), order,)
 
         if verbose:
-            print "Fetching issues with query:", queryString
+            print("Fetching issues with query:", queryString)
 
         issues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'])
 
         if verbose:
-            print "Fetched", len(issues), "issues"
+            print("Fetched", len(issues), "issues")
 
         return issues
