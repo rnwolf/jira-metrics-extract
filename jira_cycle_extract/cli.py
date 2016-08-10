@@ -35,6 +35,7 @@ parser.add_argument('--scatterplot', metavar='scatterplot.csv', help='Calculate 
 parser.add_argument('--histogram', metavar='histogram.csv', help='Calculate data to draw a cycle time histogram and write to file. Hint: Plot as a column chart.')
 parser.add_argument('--throughput', metavar='throughput.csv', help='Calculate daily throughput data and write to file. Hint: Plot as a column chart.')
 parser.add_argument('--percentiles', metavar='percentiles.csv', help='Calculate cycle time percentiles and write to file.')
+parser.add_argument('--burnup-forecast', metavar='burnup_forecast.csv', help='Calculate forecasted dates percentiles and write to file.')
 
 parser.add_argument('--quantiles', metavar='0.3,0.5,0.75,0.85,0.95', help="Quantiles to use when calculating percentiles")
 parser.add_argument('--backlog-column', metavar='<name>', help="Name of the backlog column. Defaults to the first column.")
@@ -177,6 +178,20 @@ def main():
     field_names = sorted(options['settings']['fields'].keys())
     query_attribute_names = [q.settings['query_attribute']] if q.settings['query_attribute'] else []
 
+    # Burnup forecast
+    target = args.charts_burnup_forecast_target or None
+    trials = args.charts_burnup_forecast_trials or 1000
+
+    # TODO - parameterise historical throughput
+    burnup_forecast_data = q.burnup_forecast(
+        cfd_data,
+        daily_throughput_data,
+        trials=trials,
+        target=target,
+        backlog_column=backlog_column,
+        done_column=done_column,
+        percentiles=quantiles)
+
     # Write files
 
     if args.output:
@@ -245,6 +260,16 @@ def main():
             daily_throughput_data.to_excel(args.throughput, 'Throughput', header=True)
         else:
             daily_throughput_data.to_csv(args.throughput, header=True)
+
+    if args.burnup_forecast:
+        print("Writing burnup forecast data to", args.burnup_forecast)
+        if output_format == 'json':
+            burnup_forecast_data.to_json(args.burnup_forecast, date_format='iso')
+        elif output_format == 'xlsx':
+            burnup_forecast_data.to_excel(args.burnup_forecast_data, 'Forecast', header=True)
+        else:
+            burnup_forecast_data.to_csv(args.burnup_forecast_data, header=True)
+
 
     # Output charts (if we have the right things installed)
     if charting.HAVE_CHARTING:

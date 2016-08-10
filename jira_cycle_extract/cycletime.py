@@ -288,3 +288,86 @@ class CycleTimeQueries(QueryManager):
         """
 
         return cycle_data['cycle_time'].dropna().quantile(percentiles)
+
+    @staticmethod
+    def burnup_monte_carlo(start_value, target_value, start_date, throughput_data, trials=100):
+
+        frequency = throughput_data.index.freq
+
+        # degenerate case - no steps, abort
+        if throughput_data['count'].sum() <= 0:
+            return None
+
+        # guess how far away we are; drawing samples one at a time is slow
+        sample_buffer_size = int(2 * (target_value - start_value) / throughput_data['count'].mean())
+
+        sample_buffer = dict(idx=0, buffer=None)
+
+        def get_sample():
+            if sample_buffer['buffer'] is None or sample_buffer['idx'] >= len(sample_buffer['buffer'].index):
+                sample_buffer['buffer'] = throughput_data['count'].sample(sample_buffer_size, replace=True)
+                sample_buffer['idx'] = 0
+
+            sample_buffer['idx'] += 1
+            return sample_buffer['buffer'].iloc[sample_buffer['idx'] - 1]
+
+        series = {}
+        for t in range(trials):
+            current_date = start_date
+            current_value = start_value
+
+            dates = [current_date]
+            steps = [current_value]
+
+            while current_value < target_value:
+                current_date += frequency
+                current_value += get_sample()
+
+                dates.append(current_date)
+                steps.append(current_value)
+
+            series["Trial %d" % t] = pd.Series(steps, index=dates, name="Trial %d" % t)
+
+        return pd.DataFrame(series)
+
+    def burnup_forecast(self,
+        cfd_data,
+        throughput_data,
+        trials=100,
+        target=None,
+        backlog_column=None,
+        done_column=None,
+        percentiles=[0.5, 0.75, 0.85, 0.95]
+    ):
+        if len(cfd_data.index) == 0:
+            raise Exception("Cannot calculate burnup forecast with no data")
+        if len(throughput_data.index) == 0:
+            raise Exception("Cannot calculate burnup forecast with no completed items")
+
+        if backlog_column is None:
+            backlog_column = cfd_data.columns[0]
+
+        if done_column is None:
+            done_column = cfd_data.columns[-1]
+
+        if target is None:
+            target = cfd_data[backlog_column].max()
+
+        mc_trials = CycleTimeQueries.burnup_monte_carlo(
+            start_value=cfd_data[done_column].max(),
+            target_value=target,
+            start_date=cfd_data.index.max(),
+            throughput_data=throughput_data,
+            trials=trials
+        )
+
+        if mc_trials is not None:
+
+            for col in mc_trials:
+                mc_trials[col][mc_trials[col] > target] = target
+
+            # percentiles at finish line
+            finish_dates = mc_trials.apply(pd.Series.last_valid_index)
+            finish_date_percentiles = finish_dates.quantile(percentiles).dt.normalize()
+
+        return finish_date_percentiles

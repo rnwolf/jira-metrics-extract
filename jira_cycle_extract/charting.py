@@ -14,6 +14,8 @@ except ImportError:
 
 import datetime
 
+from .cycletime import CycleTimeQueries
+
 class UnchartableData(Exception):
     """Thrown when data does not support the required chart
     """
@@ -209,46 +211,6 @@ def burnup(cfd_data, backlog_column=None, done_column=None, title=None, ax=None)
 
     return ax
 
-def burnup_monte_carlo(start_value, target_value, start_date, throughput_data, trials=100):
-
-    frequency = throughput_data.index.freq
-
-    # degenerate case - no steps, abort
-    if throughput_data['count'].sum() <= 0:
-        return None
-
-    # guess how far away we are; drawing samples one at a time is slow
-    sample_buffer_size = int(2 * (target_value - start_value) / throughput_data['count'].mean())
-
-    sample_buffer = dict(idx=0, buffer=None)
-
-    def get_sample():
-        if sample_buffer['buffer'] is None or sample_buffer['idx'] >= len(sample_buffer['buffer'].index):
-            sample_buffer['buffer'] = throughput_data['count'].sample(sample_buffer_size, replace=True)
-            sample_buffer['idx'] = 0
-
-        sample_buffer['idx'] += 1
-        return sample_buffer['buffer'].iloc[sample_buffer['idx'] - 1]
-
-    series = {}
-    for t in range(trials):
-        current_date = start_date
-        current_value = start_value
-
-        dates = [current_date]
-        steps = [current_value]
-
-        while current_value < target_value:
-            current_date += frequency
-            current_value += get_sample()
-
-            dates.append(current_date)
-            steps.append(current_value)
-
-        series["Trial %d" % t] = pd.Series(steps, index=dates, name="Trial %d" % t)
-
-    return pd.DataFrame(series)
-
 def burnup_forecast(
     cfd_data, throughput_data, trials=100,
     target=None, backlog_column=None, done_column=None, percentiles=[0.5, 0.75, 0.85, 0.95],
@@ -290,7 +252,7 @@ def burnup_forecast(
     plot_data = cfd_data[[backlog_column, done_column]]
     plot_data.plot.line(ax=ax, legend=False)
     
-    mc_trials = burnup_monte_carlo(
+    mc_trials = CycleTimeQueries.burnup_monte_carlo(
         start_value=cfd_data[done_column].max(),
         target_value=target,
         start_date=cfd_data.index.max(),
