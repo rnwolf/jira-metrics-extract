@@ -43,7 +43,7 @@ class QueryManager(object):
         query_attribute=None,
         fields={},
         known_values={},
-        max_results=False,
+        max_results=1000,
     )
 
     fields = {}  # resolved at runtime to JIRA fields

@@ -39,7 +39,12 @@ def config_to_options(data):
             'query_attribute': None,
             'fields': {},
             'known_values': {},
-            'cycle': []
+            'cycle': [],
+
+            'max_results': 1000,
+            'quantiles': [0.3, 0.5, 0.75, 0.85, 0.95],
+            'charts_from': None,
+            'charts_to': None
         }
     }
 
@@ -115,5 +120,14 @@ def config_to_options(data):
     if 'known values' in config:
         for name, values in config['known values'].items():
             options['settings']['known_values'][name] = force_list(values)
+
+    if 'max results' in config:
+        options['settings']['max_results'] = config['max results']
+    if 'quantiles' in config:
+        options['settings']['quantiles'] = force_list(config['quantiles'])
+    if 'charts from' in config:
+        options['settings']['charts_from'] = config['charts from']
+    if 'charts to' in config:
+        options['settings']['charts_to'] = config['charts to']
 
     return options

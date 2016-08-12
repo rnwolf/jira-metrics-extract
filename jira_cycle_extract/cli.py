@@ -7,6 +7,7 @@ import base64
 import sys
 
 import dateutil.parser
+from dateparser import parse as relative_parser
 
 import numpy as np
 import pandas as pd
@@ -116,6 +117,12 @@ def to_json_string(value):
     except TypeError:
         return value
 
+def parse_relative_date(str):
+    try:
+        return dateutil.parser.parse(str)
+    except ValueError:
+        return relative_parser(str)
+
 def main():
     args = parser.parse_args()
 
@@ -128,22 +135,30 @@ def main():
     with open(args.config) as config:
         options = config_to_options(config.read())
 
+    # Override settings with command line options
+
     if args.max_results:
         options['settings']['max_results'] = args.max_results
 
-    quantiles = [0.3, 0.5, 0.75, 0.85, 0.95]
-
     if args.quantiles:
         try:
-            quantiles = [float(s.strip()) for s in args.quantiles.split(',')]
+            quantiles = [float(s.strip()) for s in quantiles_raw.split(',')]
         except (AttributeError, ValueError,):
-            print("Invalid value for --quantiles")
+            print("Invalid value for --quantiles: " + args.quantiles)
             args.print_usage()
             return
+        options['settings']['quantiles'] = quantiles
+    quantiles = options['settings']['quantiles']
+
+    if args.charts_from:
+        options['settings']['charts_from'] = args.charts_from
+    if args.charts_to:
+        options['settings']['charts_to'] = args.charts_to
+
 
     output_format = args.format.lower() if args.format else 'csv'
 
-    throughput_window_end = dateutil.parser.parse(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
+    throughput_window_end = parse_relative_date(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
     throughput_window_days = args.throughput_window
 
     # Query JIRA
@@ -274,8 +289,8 @@ def main():
     # Output charts (if we have the right things installed)
     if charting.HAVE_CHARTING:
     
-        charts_from = dateutil.parser.parse(args.charts_from) if args.charts_from is not None else None
-        charts_to = dateutil.parser.parse(args.charts_to) if args.charts_to is not None else None
+        charts_from = parse_relative_date(options['settings']['charts_from']) if options['settings']['charts_from'] is not None else None
+        charts_to = parse_relative_date(options['settings']['charts_to']) if options['settings']['charts_to'] is not None else None
     
         cycle_data_sliced = cycle_data
         if charts_from is not None:
@@ -364,7 +379,7 @@ def main():
         if args.charts_burnup_forecast:
             target = args.charts_burnup_forecast_target or None
             trials = args.charts_burnup_forecast_trials or 100
-            deadline = dateutil.parser.parse(args.charts_burnup_forecast_deadline) if args.charts_burnup_forecast_deadline else None
+            deadline = parse_relative_date(args.charts_burnup_forecast_deadline) if args.charts_burnup_forecast_deadline else None
             deadline_confidence = args.charts_burnup_forecast_deadline_confidence
             
             print("Drawing burnup foreacst chart in", args.charts_burnup_forecast)

@@ -105,6 +105,16 @@ Write a YAML configuration file like so, calling it e.g. `config.yaml`::
         Priority: Priority
         Release: Fix version/s
 
+    # These can be overridden by command line options
+    Max Results: 100
+    Quantiles:
+        - 0.5
+        - 0.85
+        - 0.95
+    # This could be date (e.g. 8th Aug 2016) or relative date as in example below
+    Charts From: 1 month ago
+    Charts To: today 
+
 If you are unfamiliar with YAML, remember that:
 
 * Comments start with `#`
