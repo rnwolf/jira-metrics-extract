@@ -53,16 +53,16 @@ if charting.HAVE_CHARTING:
 
     parser.add_argument('--charts-scatterplot', metavar='scatterplot.png', help="Draw cycle time scatter plot")
     parser.add_argument('--charts-scatterplot-title', metavar='"Cycle time scatter plot"', help="Title for cycle time scatter plot")
-    
+
     parser.add_argument('--charts-histogram', metavar='histogram.png', help="Draw cycle time histogram")
     parser.add_argument('--charts-histogram-title', metavar='"Cycle time histogram"', help="Title for cycle time histogram")
-    
+
     parser.add_argument('--charts-cfd', metavar='cfd.png', help="Draw Cumulative Flow Diagram")
     parser.add_argument('--charts-cfd-title', metavar='"Cumulative Flow Diagram"', help="Title for CFD")
-    
+
     parser.add_argument('--charts-throughput', metavar='throughput.png', help="Draw weekly throughput chart with trend line")
     parser.add_argument('--charts-throughput-title', metavar='"Throughput trend"', help="Title for throughput chart")
-    
+
     parser.add_argument('--charts-burnup', metavar='burnup.png', help="Draw simple burn-up chart")
     parser.add_argument('--charts-burnup-title', metavar='"Burn-up"', help="Title for burn-up charts_scatterplot")
 
@@ -170,8 +170,8 @@ def main():
 
         print("Fetching issues (this could take some time)")
         cycle_data = q.cycle_data(verbose=args.verbose)
-    except JIRAError, e:
-        eprint(e) 
+    except JIRAError as e:
+        eprint(e)
         return 1
 
 
@@ -288,18 +288,18 @@ def main():
 
     # Output charts (if we have the right things installed)
     if charting.HAVE_CHARTING:
-    
+
         charts_from = parse_relative_date(options['settings']['charts_from']) if options['settings']['charts_from'] is not None else None
         charts_to = parse_relative_date(options['settings']['charts_to']) if options['settings']['charts_to'] is not None else None
-    
+
         cycle_data_sliced = cycle_data
         if charts_from is not None:
             cycle_data_sliced = cycle_data[cycle_data['completed_timestamp'] >= charts_from]
         if charts_to is not None:
             cycle_data_sliced = cycle_data[cycle_data['completed_timestamp'] <= charts_to]
-        
+
         cfd_data_sliced = cfd_data[slice(charts_from, charts_to)]
-        
+
         charting.set_context()
 
         if args.charts_scatterplot:
@@ -311,7 +311,7 @@ def main():
                     percentiles=quantiles,
                     title=args.charts_scatterplot_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -326,7 +326,7 @@ def main():
                     percentiles=quantiles,
                     title=args.charts_histogram_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -340,7 +340,7 @@ def main():
                     cfd_data_sliced,
                     title=args.charts_cfd_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -354,7 +354,7 @@ def main():
                     daily_throughput_data,
                     title=args.charts_throughput_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -370,7 +370,7 @@ def main():
                     done_column=done_column,
                     title=args.charts_burnup_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -381,7 +381,7 @@ def main():
             trials = args.charts_burnup_forecast_trials or 100
             deadline = parse_relative_date(args.charts_burnup_forecast_deadline) if args.charts_burnup_forecast_deadline else None
             deadline_confidence = args.charts_burnup_forecast_deadline_confidence
-            
+
             print("Drawing burnup foreacst chart in", args.charts_burnup_forecast)
             charting.set_style('whitegrid')
             try:
@@ -397,7 +397,7 @@ def main():
                     deadline_confidence=deadline_confidence,
                     title=args.charts_burnup_forecast_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -413,7 +413,7 @@ def main():
                     end_column=final_column,
                     title=args.charts_wip_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -430,7 +430,7 @@ def main():
                     done_column=done_column,
                     title=args.charts_ageing_wip_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
@@ -446,7 +446,7 @@ def main():
                     end_column=done_column,
                     title=args.charts_net_flow_title
                 )
-            except charting.UnchartableData, e:
+            except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
                 fig = ax.get_figure()
