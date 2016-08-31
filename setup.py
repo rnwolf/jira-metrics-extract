@@ -25,6 +25,7 @@ setup(
         'pandas>=0.18',
         'numpy',
         'python-dateutil',
+        'dateparser',
         'pydicti',
         'openpyxl',
     ],
