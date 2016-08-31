@@ -1,3 +1,4 @@
+import os
 import yaml
 from pydicti import odicti
 
@@ -29,10 +30,10 @@ def config_to_options(data):
     config = ordered_load(data, yaml.SafeLoader)
     options = {
         'connection': {
-            'domain': None,
-            'username': None,
-            'password': None,
-            'token': None
+            'domain': os.environ.get('JIRA_DOMAIN', None),
+            'username': os.environ.get('JIRA_USERNAME', None),
+            'password': os.environ.get('JIRA_PASSWORD', None),
+            'token': os.environ.get('JIRA_TOKEN', None)
         },
         'settings': {
             'queries': [],
