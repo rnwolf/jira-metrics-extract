@@ -28,6 +28,7 @@ setup(
         'dateparser',
         'pydicti',
         'openpyxl',
+        'future'
     ],
 
     extras_require={

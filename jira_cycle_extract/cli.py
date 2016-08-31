@@ -24,65 +24,67 @@ def eprint(*args, **kwargs):
     """
     print(*args, file=sys.stderr, **kwargs)
 
-parser = argparse.ArgumentParser(description='Extract cycle time analytics data from JIRA.')
-parser.add_argument('config', metavar='config.yml', help='Configuration file')
-parser.add_argument('output', metavar='data.csv', nargs='?', help='Output file. Contains all issues described by the configuration file, metadata, and dates of entry to each state in the cycle.')
-parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
-parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues')
-parser.add_argument('--format', metavar='csv|json|xlsx', help="Output format for data (default CSV)")
-parser.add_argument('--records', metavar='records.json', help="All the ouptut data for issues as JSON records instead of arrays.")
-parser.add_argument('--cfd', metavar='cfd.csv', help='Calculate data to draw a Cumulative Flow Diagram and write to file. Hint: Plot as a (non-stacked) area chart.')
-parser.add_argument('--scatterplot', metavar='scatterplot.csv', help='Calculate data to draw a cycle time scatter plot and write to file. Hint: Plot as a scatter chart.')
-parser.add_argument('--histogram', metavar='histogram.csv', help='Calculate data to draw a cycle time histogram and write to file. Hint: Plot as a column chart.')
-parser.add_argument('--throughput', metavar='throughput.csv', help='Calculate daily throughput data and write to file. Hint: Plot as a column chart.')
-parser.add_argument('--percentiles', metavar='percentiles.csv', help='Calculate cycle time percentiles and write to file.')
-parser.add_argument('--burnup-forecast', metavar='burnup_forecast.csv', help='Calculate forecasted dates percentiles and write to file.')
+def create_argument_parser():
+    parser = argparse.ArgumentParser(description='Extract cycle time analytics data from JIRA.')
+    parser.add_argument('config', metavar='config.yml', help='Configuration file')
+    parser.add_argument('output', metavar='data.csv', nargs='?', help='Output file. Contains all issues described by the configuration file, metadata, and dates of entry to each state in the cycle.')
+    parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
+    parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues')
+    parser.add_argument('--format', metavar='csv|json|xlsx', help="Output format for data (default CSV)")
+    parser.add_argument('--records', metavar='records.json', help="All the ouptut data for issues as JSON records instead of arrays.")
+    parser.add_argument('--cfd', metavar='cfd.csv', help='Calculate data to draw a Cumulative Flow Diagram and write to file. Hint: Plot as a (non-stacked) area chart.')
+    parser.add_argument('--scatterplot', metavar='scatterplot.csv', help='Calculate data to draw a cycle time scatter plot and write to file. Hint: Plot as a scatter chart.')
+    parser.add_argument('--histogram', metavar='histogram.csv', help='Calculate data to draw a cycle time histogram and write to file. Hint: Plot as a column chart.')
+    parser.add_argument('--throughput', metavar='throughput.csv', help='Calculate daily throughput data and write to file. Hint: Plot as a column chart.')
+    parser.add_argument('--percentiles', metavar='percentiles.csv', help='Calculate cycle time percentiles and write to file.')
+    parser.add_argument('--burnup-forecast', metavar='burnup_forecast.csv', help='Calculate forecasted dates percentiles and write to file.')
 
-parser.add_argument('--quantiles', metavar='0.3,0.5,0.75,0.85,0.95', help="Quantiles to use when calculating percentiles")
-parser.add_argument('--backlog-column', metavar='<name>', help="Name of the backlog column. Defaults to the first column.")
-parser.add_argument('--committed-column', metavar='<name>', help="Name of the column from which work is considered committed. Defaults to the second column.")
-parser.add_argument('--final-column', metavar='<name>', help="Name of the final 'work' column. Defaults to the penultimate column.")
-parser.add_argument('--done-column', metavar='<name>', help="Name of the 'done' column. Defaults to the last column.")
-parser.add_argument('--throughput-window', metavar='60', type=int, default=60, help="How many days in the past to use for calculating throughput")
-parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window.")
+    parser.add_argument('--quantiles', metavar='0.3,0.5,0.75,0.85,0.95', help="Quantiles to use when calculating percentiles")
+    parser.add_argument('--backlog-column', metavar='<name>', help="Name of the backlog column. Defaults to the first column.")
+    parser.add_argument('--committed-column', metavar='<name>', help="Name of the column from which work is considered committed. Defaults to the second column.")
+    parser.add_argument('--final-column', metavar='<name>', help="Name of the final 'work' column. Defaults to the penultimate column.")
+    parser.add_argument('--done-column', metavar='<name>', help="Name of the 'done' column. Defaults to the last column.")
+    parser.add_argument('--throughput-window', metavar='60', type=int, default=60, help="How many days in the past to use for calculating throughput")
+    parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window.")
 
-if charting.HAVE_CHARTING:
+    if charting.HAVE_CHARTING:
 
-    parser.add_argument('--charts-from', metavar=(datetime.date.today() - datetime.timedelta(days=30)).isoformat(), help="Limit time window when drawing charts to start from this date")
-    parser.add_argument('--charts-to', metavar=datetime.date.today().isoformat(), help="Limit time window when drawing charts to end at this date")
+        parser.add_argument('--charts-from', metavar=(datetime.date.today() - datetime.timedelta(days=30)).isoformat(), help="Limit time window when drawing charts to start from this date")
+        parser.add_argument('--charts-to', metavar=datetime.date.today().isoformat(), help="Limit time window when drawing charts to end at this date")
 
-    parser.add_argument('--charts-scatterplot', metavar='scatterplot.png', help="Draw cycle time scatter plot")
-    parser.add_argument('--charts-scatterplot-title', metavar='"Cycle time scatter plot"', help="Title for cycle time scatter plot")
+        parser.add_argument('--charts-scatterplot', metavar='scatterplot.png', help="Draw cycle time scatter plot")
+        parser.add_argument('--charts-scatterplot-title', metavar='"Cycle time scatter plot"', help="Title for cycle time scatter plot")
 
-    parser.add_argument('--charts-histogram', metavar='histogram.png', help="Draw cycle time histogram")
-    parser.add_argument('--charts-histogram-title', metavar='"Cycle time histogram"', help="Title for cycle time histogram")
+        parser.add_argument('--charts-histogram', metavar='histogram.png', help="Draw cycle time histogram")
+        parser.add_argument('--charts-histogram-title', metavar='"Cycle time histogram"', help="Title for cycle time histogram")
 
-    parser.add_argument('--charts-cfd', metavar='cfd.png', help="Draw Cumulative Flow Diagram")
-    parser.add_argument('--charts-cfd-title', metavar='"Cumulative Flow Diagram"', help="Title for CFD")
+        parser.add_argument('--charts-cfd', metavar='cfd.png', help="Draw Cumulative Flow Diagram")
+        parser.add_argument('--charts-cfd-title', metavar='"Cumulative Flow Diagram"', help="Title for CFD")
 
-    parser.add_argument('--charts-throughput', metavar='throughput.png', help="Draw weekly throughput chart with trend line")
-    parser.add_argument('--charts-throughput-title', metavar='"Throughput trend"', help="Title for throughput chart")
+        parser.add_argument('--charts-throughput', metavar='throughput.png', help="Draw weekly throughput chart with trend line")
+        parser.add_argument('--charts-throughput-title', metavar='"Throughput trend"', help="Title for throughput chart")
 
-    parser.add_argument('--charts-burnup', metavar='burnup.png', help="Draw simple burn-up chart")
-    parser.add_argument('--charts-burnup-title', metavar='"Burn-up"', help="Title for burn-up charts_scatterplot")
+        parser.add_argument('--charts-burnup', metavar='burnup.png', help="Draw simple burn-up chart")
+        parser.add_argument('--charts-burnup-title', metavar='"Burn-up"', help="Title for burn-up charts_scatterplot")
 
-    parser.add_argument('--charts-burnup-forecast', metavar='burnup-forecast.png', help="Draw burn-up chart with Monte Carlo simulation forecast to completion")
-    parser.add_argument('--charts-burnup-forecast-title', metavar='"Burn-up forecast"', help="Title for burn-up forecast chart")
-    parser.add_argument('--charts-burnup-forecast-target', metavar='<num stories>', type=int, help="Target completion scope for forecast. Defaults to current size of backlog.")
-    parser.add_argument('--charts-burnup-forecast-deadline', metavar=datetime.date.today().isoformat(), help="Deadline date for completion of backlog. If set, it will be shown on the chart, and the forecast delta will also be shown.")
-    parser.add_argument('--charts-burnup-forecast-deadline-confidence', metavar=.85, type=float, help="Quantile to use when comparing deadline to forecast.")
-    parser.add_argument('--charts-burnup-forecast-trials', metavar='100', type=int, default=100, help="Number of iterations in Monte Carlo simulation.")
+        parser.add_argument('--charts-burnup-forecast', metavar='burnup-forecast.png', help="Draw burn-up chart with Monte Carlo simulation forecast to completion")
+        parser.add_argument('--charts-burnup-forecast-title', metavar='"Burn-up forecast"', help="Title for burn-up forecast chart")
+        parser.add_argument('--charts-burnup-forecast-target', metavar='<num stories>', type=int, help="Target completion scope for forecast. Defaults to current size of backlog.")
+        parser.add_argument('--charts-burnup-forecast-deadline', metavar=datetime.date.today().isoformat(), help="Deadline date for completion of backlog. If set, it will be shown on the chart, and the forecast delta will also be shown.")
+        parser.add_argument('--charts-burnup-forecast-deadline-confidence', metavar=.85, type=float, help="Quantile to use when comparing deadline to forecast.")
+        parser.add_argument('--charts-burnup-forecast-trials', metavar='100', type=int, default=100, help="Number of iterations in Monte Carlo simulation.")
 
-    parser.add_argument('--charts-wip', metavar='wip', help="Draw weekly WIP box plot")
-    parser.add_argument('--charts-wip-title', metavar='"Weekly WIP"', help="Title for WIP chart")
-    parser.add_argument('--charts-wip-window', metavar='6', default=6, type=int, help="Number of weeks in the past for which to draw weekly WIP chart")
+        parser.add_argument('--charts-wip', metavar='wip', help="Draw weekly WIP box plot")
+        parser.add_argument('--charts-wip-title', metavar='"Weekly WIP"', help="Title for WIP chart")
+        parser.add_argument('--charts-wip-window', metavar='6', default=6, type=int, help="Number of weeks in the past for which to draw weekly WIP chart")
 
-    parser.add_argument('--charts-ageing-wip', metavar='ageing-wip.png', help="Draw current ageing WIP chart")
-    parser.add_argument('--charts-ageing-wip-title', metavar='"Ageing WIP"', help="Title for ageing WIP chart")
+        parser.add_argument('--charts-ageing-wip', metavar='ageing-wip.png', help="Draw current ageing WIP chart")
+        parser.add_argument('--charts-ageing-wip-title', metavar='"Ageing WIP"', help="Title for ageing WIP chart")
 
-    parser.add_argument('--charts-net-flow', metavar='net-flow.png', help="Draw weekly net flow bar chart")
-    parser.add_argument('--charts-net-flow-title', metavar='"Net flow"', help="Title for net flow bar chart`")
-    parser.add_argument('--charts-net-flow-window', metavar='6', default=6, type=int, help="Number of weeks in the past for which to draw net flow chart")
+        parser.add_argument('--charts-net-flow', metavar='net-flow.png', help="Draw weekly net flow bar chart")
+        parser.add_argument('--charts-net-flow-title', metavar='"Net flow"', help="Title for net flow bar chart`")
+        parser.add_argument('--charts-net-flow-window', metavar='6', default=6, type=int, help="Number of weeks in the past for which to draw net flow chart")
+    return parser
 
 def get_jira_client(connection):
     url = connection['domain']
@@ -124,6 +126,7 @@ def parse_relative_date(str):
         return relative_parser(str)
 
 def main():
+    parser = create_argument_parser()
     args = parser.parse_args()
 
     if not args.config:
