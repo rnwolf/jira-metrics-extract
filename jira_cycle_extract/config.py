@@ -51,22 +51,11 @@ def config_to_options(data):
 
     # Parse and validate Connection
 
-    if 'connection' not in config:
-        raise ConfigError("`Connection` section not found")
+    if 'connection' in config:
+        options['connection'].update(config['connection'])
 
-    if 'domain' not in config['connection']:
+    if 'domain' not in options['connection']:
         raise ConfigError("No `Domain` set in the `Connection` section")
-
-    options['connection']['domain'] = config['connection']['domain']
-
-    if 'username' in config['connection']:
-        options['connection']['username'] = config['connection']['username']
-
-    if 'password' in config['connection']:
-        options['connection']['password'] = config['connection']['password']
-
-    if 'token' in config['connection']:
-        options['connection']['token'] = config['connection']['token']
 
     # Parse Queries (list of Criteria) and/or a single Criteria
 
