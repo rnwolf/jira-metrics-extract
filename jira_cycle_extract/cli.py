@@ -146,11 +146,11 @@ def main():
     if args.quantiles:
         try:
             quantiles = [float(s.strip()) for s in quantiles_raw.split(',')]
+            options['settings']['quantiles'] = quantiles
         except (AttributeError, ValueError,):
             print("Invalid value for --quantiles: " + args.quantiles)
             args.print_usage()
             return
-        options['settings']['quantiles'] = quantiles
     quantiles = options['settings']['quantiles']
 
     if args.charts_from:
