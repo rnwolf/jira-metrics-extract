@@ -185,7 +185,17 @@ class QueryManager(object):
         if verbose:
             print("Fetching issues with query:", queryString)
 
-        issues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'])
+        fromRow=0
+        issues = []
+        while True:
+            pageofissues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'],startAt=fromRow)
+            fromRow = fromRow + int(self.settings['max_results'])
+            issues += pageofissues
+            if verbose:
+                print("Got %s results per jira query from result starting at line number %s " % (self.settings['max_results'],  fromRow))
+            if len(pageofissues)==0:
+                break
+
 
         if verbose:
             print("Fetched", len(issues), "issues")
