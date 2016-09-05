@@ -90,16 +90,33 @@ def config_to_options(data):
     if len(config['workflow'].keys()) < 2:
         raise ConfigError("`Workflow` section must contain at least two statuses")
 
+    # Point at which we commit to working on the issue
+    if 'commitment point' in config:
+        options['settings']['commitment_point_workflow_status'] = config['commitment point']
+
+    passed_commitment_point = False
     for name, statuses in config['workflow'].items():
         statuses = force_list(statuses)
 
-        options['settings']['cycle'].append({
+        if name == options['settings']['commitment_point_workflow_status']:
+            passed_commitment_point = True
+
+        if not passed_commitment_point:
+            options['settings']['cycle'].append({
+            "name": name,
+            "type": StatusTypes.backlog,
+            "statuses": statuses
+            })
+        else:  # passed_commitment_point:
+            options['settings']['cycle'].append({
             "name": name,
             "type": StatusTypes.accepted,
             "statuses": statuses
-        })
+            })
 
+    # First one is always of status backlog
     options['settings']['cycle'][0]['type'] = StatusTypes.backlog
+    # Last one is always of status complete
     options['settings']['cycle'][-1]['type'] = StatusTypes.complete
 
     # Parse attributes (fields)
