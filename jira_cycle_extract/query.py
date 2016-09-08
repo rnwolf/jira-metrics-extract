@@ -166,7 +166,7 @@ class QueryManager(object):
         query = []
 
         if criteria.get('project', False):
-            query.append('project = %s' % criteria['project'])
+            query.append('project IN (%s)' % ', '.join(['"%s"' % p for p in criteria['project']]))
 
         if criteria.get('issue_types', False):
             query.append('issueType IN (%s)' % ', '.join(['"%s"' % t for t in criteria['issue_types']]))

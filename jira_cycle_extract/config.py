@@ -64,7 +64,7 @@ def config_to_options(data):
         for query in config['queries']['criteria']:
             options['settings']['queries'].append({
                 'value': query.get('value', None),
-                'project': query.get('project', None),
+                'project': force_list(query.get('project', [])),
                 'issue_types': force_list(query.get('issue types', [])),
                 'valid_resolutions': force_list(query.get('valid resolutions', [])),
                 'jql_filter': query.get('jql', None)
@@ -73,7 +73,7 @@ def config_to_options(data):
     if 'criteria' in config:
         options['settings']['queries'].append({
             'value': config['criteria'].get('value', None),
-            'project': config['criteria'].get('project', None),
+            'project': force_list(config['criteria'].get('project', [])),
             'issue_types': force_list(config['criteria'].get('issue types', [])),
             'valid_resolutions': force_list(config['criteria'].get('valid resolutions', [])),
             'jql_filter': config['criteria'].get('jql', None)
