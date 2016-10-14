@@ -49,6 +49,15 @@ def cycle_time_scatterplot(cycle_data, percentiles=[0.3, 0.5, 0.75, 0.85, 0.95],
     if title is not None:
         ax.set_title(title)
 
+    # Make sure we have charting area that is a bit larger than the data so that we can see points at the edge.
+    datemin = scatter_df['completed_timestamp'].min() - datetime.timedelta(days=1)
+    datemax = scatter_df['completed_timestamp'].max() + datetime.timedelta(days=1)
+    ax.set_xlim(datemin, datemax)
+    ymin = ct_days.min() - 1
+    ymax = ct_days.max() + 1
+    ax.set_ylim(ymin, ymax)
+
+    # Plot the data
     ax.plot_date(x=scatter_df['completed_timestamp'], y=ct_days, ms=5)
 
     # Add percentiles
@@ -96,7 +105,7 @@ def cycle_time_histogram(cycle_data, bins=30, percentiles=[0.3, 0.5, 0.75, 0.85,
 
     return ax
 
-def cfd(cfd_data, title=None, ax=None):
+def cfd(cfd_data, title=None, ax=None, pointscolumn=None):
     if len(cfd_data.index) == 0:
         raise UnchartableData("Cannot draw CFD with no data")
 
@@ -111,9 +120,16 @@ def cfd(cfd_data, title=None, ax=None):
     fig.autofmt_xdate()
 
     ax.set_xlabel("Date")
-    ax.set_ylabel("Number of items")
+    if pointscolumn:
+        ax.set_ylabel("Points")
+        # Invert the sequence of columns when plotting a stacked area chart. Bottom item must be first column.
+        cfd_data = cfd_data.loc[:, ::-1]
 
-    cfd_data.plot.area(ax=ax, stacked=False, legend=False)
+        cfd_data.plot.area(ax=ax, stacked=True, legend=False)
+    else:
+        ax.set_ylabel("Number of items")
+        cfd_data.plot.area(ax=ax, stacked=False, legend=False)
+
     ax.legend(loc=0, title="", frameon=True)
 
     return ax
@@ -133,9 +149,12 @@ def throughput_chart(throughput_data, title=None, ax=None):
     fig.autofmt_xdate()
 
     ax.set_xlabel("Completed date")
-    ax.set_ylabel("Number of items")
-
-    ax.bar(throughput_data.index, throughput_data['count'])
+    if 'count' in throughput_data.columns:
+        ax.set_ylabel("Number of items")
+        ax.bar(throughput_data.index, throughput_data['count'])
+    else: #assume that it must be sum
+        ax.set_ylabel("Sum of points")
+        ax.bar(throughput_data.index, throughput_data['sum'])
 
     return ax
 
@@ -158,35 +177,57 @@ def throughput_trend_chart(throughput_data, title=None, ax=None):
     throughput_data['day'] = (throughput_data.index - day_zero).days
 
     # Fit a linear regression (http://stackoverflow.com/questions/29960917/timeseries-fitted-values-from-trend-python)
-    fit = sm.ols(formula="count ~ day", data=throughput_data).fit()
+    if 'count' in throughput_data.columns:
+        fit = sm.ols(formula="count ~ day", data=throughput_data).fit()
+    else:
+        fit = sm.ols(formula="sum ~ day", data=throughput_data).fit()
     throughput_data['fitted'] = fit.predict(throughput_data)
 
     # Plot
 
     ax.set_xlabel("Completed date")
-    ax.set_ylabel("Number of items")
+    if 'count' in throughput_data.columns:
+        ax.set_ylabel("Number of items")
+        ax.bar(throughput_data.index, throughput_data['count'])
 
-    ax.bar(throughput_data.index, throughput_data['count'])
+        bottom, top = ax.get_ylim()
+        ax.set_ylim(0, top + 1)
 
-    bottom, top = ax.get_ylim()
-    ax.set_ylim(0, top + 1)
+        for x, y in zip(throughput_data.index, throughput_data['count']):
+            if y == 0:
+                continue
+            ax.annotate(
+                "%.0f" % y,
+                xy=(x.toordinal(), y + 0.2),
+                ha='center',
+                va='bottom',
+                fontsize="x-small",
+            )
 
-    for x, y in zip(throughput_data.index, throughput_data['count']):
-        if y == 0:
-            continue
-        ax.annotate(
-            "%.0f" % y,
-            xy=(x.toordinal(), y + 0.2),
-            ha='center',
-            va='bottom',
-            fontsize="x-small",
-        )
+
+    else: # Assume that we have daily sum of story points
+        ax.set_ylabel("Points")
+        ax.bar(throughput_data.index, throughput_data['sum'])
+
+        bottom, top = ax.get_ylim()
+        ax.set_ylim(0, top + 1)
+
+        for x, y in zip(throughput_data.index, throughput_data['sum']):
+            if y == 0:
+                continue
+            ax.annotate(
+                "%.0f" % y,
+                xy=(x.toordinal(), y + 0.2),
+                ha='center',
+                va='bottom',
+                fontsize="x-small",
+            )
 
     ax.plot(throughput_data.index, throughput_data['fitted'], '--', linewidth=2)
 
     return ax
 
-def burnup(cfd_data, backlog_column=None, done_column=None, title=None, ax=None):
+def burnup(cfd_data, backlog_column=None, done_column=None, title=None, ax=None, sized=''):
     if len(cfd_data.index) == 0:
         raise UnchartableData("Cannot draw burnup with no data")
 
@@ -197,13 +238,21 @@ def burnup(cfd_data, backlog_column=None, done_column=None, title=None, ax=None)
         ax.set_title(title)
 
     ax.set_xlabel("Date")
-    ax.set_ylabel("Number of items")
+
+    if sized: # Empty strings are False
+        ax.set_ylabel("Points")
+    else:
+        ax.set_ylabel("Number of items")
 
     if backlog_column is None:
         backlog_column = cfd_data.columns[0]
+    else:
+        backlog_column = backlog_column + sized
 
     if done_column is None:
         done_column = cfd_data.columns[-1]
+    else:
+        done_column = done_column + sized
 
     plot_data = cfd_data[[backlog_column, done_column]]
     plot_data.plot.line(ax=ax, legend=True)
@@ -216,8 +265,8 @@ def burnup_forecast(
     target=None, backlog_column=None, done_column=None, percentiles=[0.5, 0.75, 0.85, 0.95],
     deadline=None, deadline_confidence=None,
     title=None,
-    ax=None
-):
+    ax=None,
+    sized=''):
 
     if len(cfd_data.index) == 0:
         raise UnchartableData("Cannot draw burnup forecast chart with no data")
@@ -231,7 +280,7 @@ def burnup_forecast(
         done_column = cfd_data.columns[-1]
 
     if target is None:
-        target = cfd_data[backlog_column].max()
+        target = cfd_data[backlog_column+sized].max()
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -244,16 +293,19 @@ def burnup_forecast(
         ax.set_title(title)
     
     ax.set_xlabel("Date")
-    ax.set_ylabel("Number of items")
+    if sized: # Empty strings are False
+        ax.set_ylabel("Points")
+    else:
+        ax.set_ylabel("Number of items")
 
     transform_vertical = matplotlib.transforms.blended_transform_factory(ax.transData, ax.transAxes)
     transform_horizontal = matplotlib.transforms.blended_transform_factory(ax.transAxes, ax.transData)
 
-    plot_data = cfd_data[[backlog_column, done_column]]
+    plot_data = cfd_data[[backlog_column+sized, done_column+sized]]
     plot_data.plot.line(ax=ax, legend=False)
     
     mc_trials = CycleTimeQueries.burnup_monte_carlo(
-        start_value=cfd_data[done_column].max(),
+        start_value=cfd_data[done_column+sized].max(),
         target_value=target,
         start_date=cfd_data.index.max(),
         throughput_data=throughput_data,
@@ -382,6 +434,10 @@ def ageing_wip_chart(cycle_data, start_column, end_column, done_column=None, now
 
     # remove items that are done
     cycle_data = cycle_data[pd.isnull(cycle_data[done_column])]
+    # Check that we still have some data to proceed with.
+    if len(cycle_data.index) == 0:
+        raise UnchartableData("Cannot draw ageing WIP chart with no data - All items done!")
+
     cycle_data = pd.concat((
         cycle_data[['key', 'summary']],
         cycle_data.ix[:, start_column:end_column]

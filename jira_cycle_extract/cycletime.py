@@ -1,11 +1,16 @@
 from .query import QueryManager
 import pandas as pd
 import numpy as np
+import os
+import datetime
+import csv
 
 class StatusTypes:
+    open = 'open'
     backlog = 'backlog'
-    accepted = 'accepted'
+    accepted = 'committed'
     complete = 'complete'
+    abandoned = 'abandoned'
 
 class CycleTimeQueries(QueryManager):
     """Analysis for cycle time data, producing cumulative flow diagrams,
@@ -52,6 +57,15 @@ class CycleTimeQueries(QueryManager):
         settings = super(CycleTimeQueries, self).settings.copy()
         settings.update(self.settings.copy())
         settings.update(kwargs)
+
+        settings['sized_statuses'] = [] # All columns/statuses other than "open" could be sized via Story Points
+        settings['none_sized_statuses'] = [] # Only columns/statuses that are of type "open"
+        for s in settings['cycle']:
+            # Make all states "sized"
+            #if (s['type'] == StatusTypes.open):
+            #    settings['none_sized_statuses'].append(s['name'])
+            #else:
+            settings['sized_statuses'].append(s['name'])
 
         settings['cycle_lookup'] = {}
         for idx, cycle_step in enumerate(settings['cycle']):
@@ -114,89 +128,108 @@ class CycleTimeQueries(QueryManager):
         if self.settings['query_attribute']:
             series[self.settings['query_attribute']] = {'data': [], 'dtype': str}
 
-        for criteria in self.settings['queries']:
-            for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
+        createJiraCache = False
+        if self.settings['cache_jira']:
+            if not os.path.exists(self.settings['cache_jira']):
+                createJiraCache = True
 
-                item = {
-                    'key': issue.key,
-                    'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
-                    'issue_type': issue.fields.issuetype.name,
-                    'summary': issue.fields.summary.encode('utf-8'),
-                    'status': issue.fields.status.name,
-                    'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
-                    'cycle_time': None,
-                    'completed_timestamp': None
-                }
 
-                for name, field_name in self.fields.items():
-                    item[name] = self.resolve_field_value(issue, name, field_name)
+        if (self.settings['cache_jira'] == None ) or createJiraCache:
+            for criteria in self.settings['queries']:
+                for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
 
-                if self.settings['query_attribute']:
-                    item[self.settings['query_attribute']] = criteria.get('value', None)
+                    item = {
+                        'key': issue.key,
+                        'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
+                        'issue_type': issue.fields.issuetype.name,
+                        'summary': issue.fields.summary.encode('utf-8'),
+                        'status': issue.fields.status.name,
+                        'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
+                        'cycle_time': None,
+                        'completed_timestamp': None
+                    }
 
-                for cycle_name in cycle_names:
-                    item[cycle_name] = None
+                    for name, field_name in self.fields.items():
+                        item[name] = self.resolve_field_value(issue, name, field_name)
 
-                # Record date of status changes
-                for snapshot in self.iter_changes(issue, False):
-                    snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
-                    if snapshot_cycle_step is None:
-                        if verbose:
-                            print(issue.key, "transitioned to unknown JIRA status", snapshot.status)
-                        continue
+                    if self.settings['query_attribute']:
+                        item[self.settings['query_attribute']] = criteria.get('value', None)
 
-                    snapshot_cycle_step_name = snapshot_cycle_step['name']
-
-                    # Keep the first time we entered a step
-                    if item[snapshot_cycle_step_name] is None:
-                        item[snapshot_cycle_step_name] = snapshot.date
-
-                    # Wipe any subsequent dates, in case this was a move backwards
-                    found_cycle_name = False
                     for cycle_name in cycle_names:
-                        if not found_cycle_name and cycle_name == snapshot_cycle_step_name:
-                            found_cycle_name = True
-                            continue
-                        elif found_cycle_name and item[cycle_name] is not None:
+                        item[cycle_name] = None
+
+                    # Record date of status changes
+                    for snapshot in self.iter_changes(issue, False):
+                        snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
+                        if snapshot_cycle_step is None:
                             if verbose:
-                                print(issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name)
-                            item[cycle_name] = None
+                                print(issue.key, "transitioned to unknown JIRA status", snapshot.status)
+                            continue
 
-                # Wipe timestamps if items have moved backwards; calculate cycle time
+                        snapshot_cycle_step_name = snapshot_cycle_step['name']
 
-                previous_timestamp = None
-                accepted_timestamp = None
-                completed_timestamp = None
+                        # Keep the first time we entered a step
+                        if item[snapshot_cycle_step_name] is None:
+                            item[snapshot_cycle_step_name] = snapshot.date
 
-                for cycle_name in cycle_names:
-                    if item[cycle_name] is not None:
-                        previous_timestamp = item[cycle_name]
+                        # Wipe any subsequent dates, in case this was a move backwards
+                        found_cycle_name = False
+                        for cycle_name in cycle_names:
+                            if not found_cycle_name and cycle_name == snapshot_cycle_step_name:
+                                found_cycle_name = True
+                                continue
+                            elif found_cycle_name and item[cycle_name] is not None:
+                                if verbose:
+                                    print(issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name)
+                                item[cycle_name] = None
 
-                        if accepted_timestamp is None and previous_timestamp is not None and cycle_name in accepted_steps:
-                            accepted_timestamp = previous_timestamp
-                        if completed_timestamp is None and previous_timestamp is not None and cycle_name in completed_steps:
-                            completed_timestamp = previous_timestamp
+                    # Wipe timestamps if items have moved backwards; calculate cycle time
 
-                if accepted_timestamp is not None and completed_timestamp is not None:
-                    item['cycle_time'] = completed_timestamp - accepted_timestamp
-                    item['completed_timestamp'] = completed_timestamp
+                    previous_timestamp = None
+                    accepted_timestamp = None
+                    completed_timestamp = None
 
-                for k, v in item.items():
-                    series[k]['data'].append(v)
+                    for cycle_name in cycle_names:
+                        if item[cycle_name] is not None:
+                            previous_timestamp = item[cycle_name]
 
-        data = {}
-        for k, v in series.items():
-            data[k] = pd.Series(v['data'], dtype=v['dtype'])
+                            if accepted_timestamp is None and previous_timestamp is not None and cycle_name in accepted_steps:
+                                accepted_timestamp = previous_timestamp
+                            if completed_timestamp is None and previous_timestamp is not None and cycle_name in completed_steps:
+                                completed_timestamp = previous_timestamp
 
-        return pd.DataFrame(data,
-            columns=['key', 'url', 'issue_type', 'summary', 'status', 'resolution'] +
-                    sorted(self.fields.keys()) +
-                    ([self.settings['query_attribute']] if self.settings['query_attribute'] else []) +
-                    ['cycle_time', 'completed_timestamp'] +
-                    cycle_names
-        )
+                    if accepted_timestamp is not None and completed_timestamp is not None:
+                        item['cycle_time'] = completed_timestamp - accepted_timestamp
+                        item['completed_timestamp'] = completed_timestamp
 
-    def cfd(self, cycle_data):
+                    for k, v in item.items():
+                        series[k]['data'].append(v)
+
+            data = {}
+            for k, v in series.items():
+                data[k] = pd.Series(v['data'], dtype=v['dtype'])
+
+            result= pd.DataFrame(data,
+                columns=['key', 'url', 'issue_type', 'summary', 'status', 'resolution'] +
+                        sorted(self.fields.keys()) +
+                        ([self.settings['query_attribute']] if self.settings['query_attribute'] else []) +
+                        ['cycle_time', 'completed_timestamp'] +
+                        cycle_names
+            )
+            if createJiraCache:
+                result.to_pickle(self.settings['cache_jira'])
+            return result
+
+        elif not createJiraCache: # Because it already exists
+            try:
+                result = pd.read_pickle(self.settings['cache_jira'])
+            except IOError:
+                print('Oh dear did not find the jira cache pickeled to :', self.settings['cache_jira'])
+            return result
+
+
+
+    def cfd(self, cycle_data,pointscolumn= None, stacked = True ):
         """Return the data to build a cumulative flow diagram: a DataFrame,
         indexed by day, with columns containing cumulative counts for each
         of the items in the configured cycle.
@@ -204,12 +237,79 @@ class CycleTimeQueries(QueryManager):
         In addition, a column called `cycle_time` contains the approximate
         average cycle time of that day based on the first "accepted" status
         and the first "complete" status.
+
+        If stacked = True then return dataframe suitable for plotting as stacked area chart
+        else return for platting as non-staked or line chart.
         """
 
+        # Define helper function
+        def cumulativeColumnStates(df,stacked):
+            """
+            Calculate the column sums, were the incoming matrix columns represents items in workflow states
+            States progress from left to right.
+            We what to zero out items, other than right most value to avoid counting items in prior states.
+            :param df:
+            :return: pandas dataframe row with sum of column items
+            """
+
+            # Helper functions to return the right most cells in 2D array
+            def last_number(lst):
+                if all(map(lambda x: x == 0, lst)):
+                    return 0
+                elif lst[-1] != 0:
+                    return len(lst) - 1
+                else:
+                    return last_number(lst[:-1])
+
+            def fill_others(lst):
+                new_lst = [0] * len(lst)
+                new_lst[last_number(lst)] = lst[last_number(lst)]
+                return new_lst
+
+            df_zeroed = df.fillna(value=0)  # ,inplace = True   Get rid of non numeric items. Make a ?deep? copy
+            if stacked:
+                df_result = df_zeroed.apply(lambda x: fill_others(x.values.tolist()), axis=1)
+            else:
+                df_result = df_zeroed
+
+            sum_row = df_result[df.columns].sum()  # Sum Columns
+            return pd.DataFrame(data=sum_row).T  # Transpose into row dataframe and return
+
+        # Define helper function
+        def hide_greater_than_date(cell, adate):
+            """ Helper function to compare date values in cells
+            """
+            result = False
+            try:
+                celldatetime = datetime.date(cell.year, cell.month, cell.day)
+            except:
+                return True
+            if celldatetime > adate:
+                return True
+            return False  # We have a date value in cell and it is less than or equal to input date
+
+        #print(pointscolumn)
+
+        # List of all state change columns that may have date value in them
         cycle_names = [s['name'] for s in self.settings['cycle']]
 
+        # Create list of columns that we want to return in our results dataFrame
+        slice_columns = list(self.settings['none_sized_statuses']) # Make a COPY of the list so that we dont modify the reference.
+        if pointscolumn:
+            for size_state in self.settings['sized_statuses']:  # states_to_size:
+                sizedStateName = size_state + 'Sized'
+                slice_columns.append(sizedStateName)
+            # Check that it works if we use all columns as sized.
+            slice_columns = []
+            for size_state in cycle_names:
+                sizedStateName = size_state + 'Sized'
+                slice_columns.append(sizedStateName)
+        else:
+            slice_columns = cycle_names
+
+
         # Build a dataframe of just the "date" columns
-        df = cycle_data[cycle_names]
+        df = cycle_data[cycle_names].copy()
 
         # Strip out times from all dates
         df = pd.DataFrame(
@@ -218,14 +318,76 @@ class CycleTimeQueries(QueryManager):
             index=df.index
         )
 
+        # Get a list of dates that a issue changed state
+        state_changes_on_dates_set = set()
+        for state in cycle_names:
+            state_changes_on_dates_set = state_changes_on_dates_set.union(set(df[state]))
+            # How many unique days did a issue stage state
+        # Remove non timestamp vlaues and sort the list
+        state_changes_on_dates = filter(lambda x: type(x.date()) == datetime.date,
+                                        sorted(list(state_changes_on_dates_set)))
+
+
+
         # Replace missing NaT values (happens if a status is skipped) with the subsequent timestamp
         df = df.fillna(method='bfill', axis=1)
 
+
+        if pointscolumn:
+            storypoints = cycle_data[pointscolumn]
+            ids = cycle_data['key']
+
+
+        # create blank results dataframe
+        df_results = pd.DataFrame()
+        # For each date on which we had a issue state change we want to count and sum the totals for each of the given states
+        # 'Open','Analysis','Backlog','In Process','Done','Withdrawn'
+        timenowstr = datetime.datetime.now().strftime('-run-%H-%M-%S')
+        for statechangedate in state_changes_on_dates:
+            if type(statechangedate.date()) == datetime.date:
+                # filterdate.year,filterdate.month,filterdate.day
+                filterdate = datetime.date(statechangedate.year, statechangedate.month,
+                                           statechangedate.day)  # statechangedate.datetime()
+
+                # Apply function to each cell and only make it visible if issue was in state on or after the filter date
+                df_filtered = df.applymap(lambda x: 0 if hide_greater_than_date(x, filterdate) else 1)
+
+                if pointscolumn:
+                    df_countable = pd.concat([ids, storypoints, df_filtered], axis=1)
+                else:
+                    df_countable = df_filtered
+
+                # Because we size issues with Story Points we need to add some additional columns
+                # for each state based on size not just count
+                if pointscolumn:
+                    for size_state in self.settings['sized_statuses']: #states_to_size:
+                        sizedStateName = size_state + 'Sized'
+                        df_countable[sizedStateName] = df_countable.apply(
+                            lambda row: (row[pointscolumn] * row[size_state] if row[pointscolumn] > 0 else (1.0 * row[size_state])), axis=1)
+
+                # Slice out the columns we want for CFD
+                # df_slice= df_countable.loc[:,('Open','Analysis','PrioritizedSized','In ProcessSized','DoneSized')]
+                #print(slice_columns)
+                #df_slice = df_countable.loc[:, ('Open', 'AnalysisSized', 'CommittedSized', 'DevelopSized', 'DoneSized')]
+
+                # For debugging write dataframe to sheet for current day.
+                #file_name="countable-cfd-for-day-"+ filterdate.isoformat()+timenowstr+".csv"
+                #df_countable.to_csv(file_name, sep='\t', lineterminator='\n', encoding='utf-8', quoting=csv.QUOTE_ALL)
+
+                df_slice = df_countable.loc[:,slice_columns]
+                df_sub_sum = cumulativeColumnStates(df_slice,stacked)
+                final_table = df_sub_sum.rename(index={0: filterdate})
+
+                # append to results
+                df_results = df_results.append(final_table)
+        df_results.sort_index(inplace=True)
+
+        df= df_results
         # Count number of times each date occurs, preserving column order
-        df = pd.concat({col: df[col].value_counts() for col in df}, axis=1)[cycle_names]
+        #df = pd.concat({col: df[col].value_counts() for col in df}, axis=1)[cycle_names]
 
         # Fill missing dates with 0 and run a cumulative sum
-        df = df.fillna(0).cumsum(axis=0)
+        #df = df.fillna(0).cumsum(axis=0)
 
         # Reindex to make sure we have all dates
         start, end = df.index.min(), df.index.max()
@@ -248,16 +410,25 @@ class CycleTimeQueries(QueryManager):
 
         return pd.Series(values, name="Items", index=index)
 
-    def throughput_data(self, cycle_data, frequency='1D'):
+    def throughput_data(self, cycle_data, frequency='1D',pointscolumn= None):
         """Return a data frame with columns `completed_timestamp` of the
-        given frequency, and `count`, where count is the number of items
+        given frequency, either
+        `count`, where count is the number of items
+        'sum', where sum is the sum of value specified by pointscolumn. Expected to be 'StoryPoints'
         completed at that timestamp (e.g. daily).
         """
-        return cycle_data[['completed_timestamp', 'key']] \
-            .rename(columns={'key': 'count'}) \
-            .groupby('completed_timestamp').count() \
-            .resample(frequency).sum() \
-            .fillna(0)
+        if pointscolumn:
+            return cycle_data[['completed_timestamp', pointscolumn]] \
+                .rename(columns={pointscolumn: 'sum'}) \
+                .groupby('completed_timestamp').sum() \
+                .resample(frequency).sum() \
+                .fillna(0)
+        else:
+            return cycle_data[['completed_timestamp', 'key']] \
+                .rename(columns={'key': 'count'}) \
+                .groupby('completed_timestamp').count() \
+                .resample(frequency).sum() \
+                .fillna(0)
 
     def scatterplot(self, cycle_data):
         """Return scatterplot data for the cycle times in `cycle_data`. Returns
@@ -294,18 +465,23 @@ class CycleTimeQueries(QueryManager):
 
         frequency = throughput_data.index.freq
 
+        if 'count' in throughput_data.columns:
+            data_column_name = 'count'
+        else:
+            data_column_name = 'sum'
+
         # degenerate case - no steps, abort
-        if throughput_data['count'].sum() <= 0:
+        if throughput_data[data_column_name].sum() <= 0:
             return None
 
         # guess how far away we are; drawing samples one at a time is slow
-        sample_buffer_size = int(2 * (target_value - start_value) / throughput_data['count'].mean())
+        sample_buffer_size = int(2 * (target_value - start_value) / throughput_data[data_column_name].mean())
 
         sample_buffer = dict(idx=0, buffer=None)
 
         def get_sample():
             if sample_buffer['buffer'] is None or sample_buffer['idx'] >= len(sample_buffer['buffer'].index):
-                sample_buffer['buffer'] = throughput_data['count'].sample(sample_buffer_size, replace=True)
+                sample_buffer['buffer'] = throughput_data[data_column_name].sample(sample_buffer_size, replace=True)
                 sample_buffer['idx'] = 0
 
             sample_buffer['idx'] += 1
@@ -337,18 +513,27 @@ class CycleTimeQueries(QueryManager):
         target=None,
         backlog_column=None,
         done_column=None,
-        percentiles=[0.5, 0.75, 0.85, 0.95]
+        percentiles=[0.5, 0.75, 0.85, 0.95],
+        sized = ''
     ):
         if len(cfd_data.index) == 0:
             raise Exception("Cannot calculate burnup forecast with no data")
         if len(throughput_data.index) == 0:
             raise Exception("Cannot calculate burnup forecast with no completed items")
 
+        # Debug - what are the column names
+        #print("backlog_column --> {}  done_column --> {}".format(backlog_column, done_column))
+        #print(cfd_data.info())
+
         if backlog_column is None:
             backlog_column = cfd_data.columns[0]
+        else:
+            backlog_column = backlog_column + sized
 
         if done_column is None:
             done_column = cfd_data.columns[-1]
+        else:
+            done_column = done_column + sized
 
         if target is None:
             target = cfd_data[backlog_column].max()

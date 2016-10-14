@@ -31,6 +31,7 @@ def create_argument_parser():
     parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
     parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues')
     parser.add_argument('--format', metavar='csv|json|xlsx', help="Output format for data (default CSV)")
+    parser.add_argument('--points', metavar="StoryPoints", help="By default we use story count, now use given column and use Story Points size for analytics")
     parser.add_argument('--records', metavar='records.json', help="All the ouptut data for issues as JSON records instead of arrays.")
     parser.add_argument('--cfd', metavar='cfd.csv', help='Calculate data to draw a Cumulative Flow Diagram and write to file. Hint: Plot as a (non-stacked) area chart.')
     parser.add_argument('--scatterplot', metavar='scatterplot.csv', help='Calculate data to draw a cycle time scatter plot and write to file. Hint: Plot as a scatter chart.')
@@ -178,19 +179,47 @@ def main():
         return 1
 
 
-    cfd_data = q.cfd(cycle_data)
+    #cfd_data = q.cfd(cycle_data)
+    cfd_data = q.cfd(cycle_data, args.points, stacked=False)
+    cfd_data_stackable = q.cfd(cycle_data, args.points, stacked=True)
+
     scatter_data = q.scatterplot(cycle_data)
     histogram_data = q.histogram(cycle_data)
     percentile_data = q.percentiles(cycle_data, percentiles=quantiles)
 
-    daily_throughput_data = q.throughput_data(
-        cycle_data[cycle_data['completed_timestamp'] >= (throughput_window_end - datetime.timedelta(days=throughput_window_days))],
-    )
+    #daily_throughput_data = q.throughput_data(
+    #    cycle_data[cycle_data['completed_timestamp'] >= (throughput_window_end - datetime.timedelta(days=throughput_window_days))],
+    #)
 
-    backlog_column = args.backlog_column or cfd_data.columns[0]
-    committed_column = args.committed_column or cfd_data.columns[1]
-    final_column = args.final_column or cfd_data.columns[-2]
-    done_column = args.done_column or cfd_data.columns[-1]
+    if args.points:
+        daily_throughput_data = q.throughput_data(
+            cycle_data[
+                cycle_data['completed_timestamp'] >= (
+                throughput_window_end - datetime.timedelta(days=throughput_window_days))],
+            pointscolumn=args.points)
+    else:
+        daily_throughput_data = q.throughput_data(
+            cycle_data[
+                cycle_data['completed_timestamp'] >= (
+                    throughput_window_end - datetime.timedelta(days=throughput_window_days))],
+        )
+
+
+    if options['settings']['statusmapping']:
+        for key, state in options['settings']['statusmapping'].iteritems():  # use .items() for python 3
+            if state == 'complete':
+                done_column = key
+            if state == 'final':
+                final_column = key
+            if state == 'committed':
+                committed_column = key
+            if state == 'backlog':
+                backlog_column = key
+    else:
+        backlog_column = args.backlog_column or cfd_data.columns[0]
+        committed_column = args.committed_column or cfd_data.columns[1]
+        final_column = args.final_column or cfd_data.columns[-2]
+        done_column = args.done_column or cfd_data.columns[-1]
 
     cycle_names = [s['name'] for s in q.settings['cycle']]
     field_names = sorted(options['settings']['fields'].keys())
@@ -201,14 +230,31 @@ def main():
     trials = args.charts_burnup_forecast_trials or 1000
 
     # TODO - parameterise historical throughput
-    burnup_forecast_data = q.burnup_forecast(
-        cfd_data,
-        daily_throughput_data,
-        trials=trials,
-        target=target,
-        backlog_column=backlog_column,
-        done_column=done_column,
-        percentiles=quantiles)
+    #try:
+    if args.points:
+        burnup_forecast_data = q.burnup_forecast(
+            cfd_data,
+            daily_throughput_data,
+            trials=trials,
+            target=target,
+            backlog_column=backlog_column,
+            done_column=done_column,
+            percentiles=quantiles,
+            sized='Sized')
+    else:
+        burnup_forecast_data = q.burnup_forecast(
+            cfd_data,
+            daily_throughput_data,
+            trials=trials,
+            target=target,
+            backlog_column=backlog_column,
+            done_column=done_column,
+            percentiles=quantiles,
+            sized='')
+
+    #except Exception as e:
+    #    print("Warning: Failed to calculate burnup forecast")
+    #    burnup_forecast_data = None
 
     # Write files
 
@@ -279,7 +325,7 @@ def main():
         else:
             daily_throughput_data.to_csv(args.throughput, header=True)
 
-    if args.burnup_forecast:
+    if args.burnup_forecast and burnup_forecast_data is not None:
         print("Writing burnup forecast data to", args.burnup_forecast)
         if output_format == 'json':
             burnup_forecast_data.to_json(args.burnup_forecast, date_format='iso')
@@ -302,6 +348,7 @@ def main():
             cycle_data_sliced = cycle_data[cycle_data['completed_timestamp'] <= charts_to]
 
         cfd_data_sliced = cfd_data[slice(charts_from, charts_to)]
+        cfd_data_stackable_sliced = cfd_data_stackable[slice(charts_from, charts_to)]
 
         charting.set_context()
 
@@ -339,10 +386,17 @@ def main():
             print("Drawing CFD in", args.charts_cfd)
             charting.set_style('whitegrid')
             try:
-                ax = charting.cfd(
-                    cfd_data_sliced,
-                    title=args.charts_cfd_title
-                )
+                if args.points:
+                    ax = charting.cfd(
+                        cfd_data_stackable_sliced,
+                        title=args.charts_cfd_title,
+                        pointscolumn=args.points
+                    )
+                else:
+                    ax = charting.cfd(
+                        cfd_data_sliced,
+                        title=args.charts_cfd_title
+                    )
             except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
@@ -367,12 +421,23 @@ def main():
             print("Drawing burnup chart in", args.charts_burnup)
             charting.set_style('whitegrid')
             try:
-                ax = charting.burnup(
-                    cfd_data_sliced,
-                    backlog_column=backlog_column,
-                    done_column=done_column,
-                    title=args.charts_burnup_title
-                )
+                if args.points:
+                    ax = charting.burnup(
+                        cfd_data_sliced,
+                        backlog_column=backlog_column,
+                        done_column=done_column,
+                        title=args.charts_burnup_title,
+                        sized = 'Sized'
+                    )
+                else:
+                    ax = charting.burnup(
+                        cfd_data_sliced,
+                        backlog_column=backlog_column,
+                        done_column=done_column,
+                        title=args.charts_burnup_title,
+                        sized=''
+                    )
+
             except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:
@@ -388,18 +453,34 @@ def main():
             print("Drawing burnup foreacst chart in", args.charts_burnup_forecast)
             charting.set_style('whitegrid')
             try:
-                ax = charting.burnup_forecast(
-                    cfd_data_sliced,
-                    daily_throughput_data,
-                    trials=trials,
-                    target=target,
-                    backlog_column=backlog_column,
-                    done_column=done_column,
-                    percentiles=quantiles,
-                    deadline=deadline,
-                    deadline_confidence=deadline_confidence,
-                    title=args.charts_burnup_forecast_title
-                )
+                if args.points:
+                    ax = charting.burnup_forecast(
+                        cfd_data_sliced,
+                        daily_throughput_data,
+                        trials=trials,
+                        target=target,
+                        backlog_column=backlog_column,
+                        done_column=done_column,
+                        percentiles=quantiles,
+                        deadline=deadline,
+                        deadline_confidence=deadline_confidence,
+                        title=args.charts_burnup_forecast_title,
+                        sized='Sized'
+                    )
+                else:
+                    ax = charting.burnup_forecast(
+                        cfd_data_sliced,
+                        daily_throughput_data,
+                        trials=trials,
+                        target=target,
+                        backlog_column=backlog_column,
+                        done_column=done_column,
+                        percentiles=quantiles,
+                        deadline=deadline,
+                        deadline_confidence=deadline_confidence,
+                        title=args.charts_burnup_forecast_title,
+                        sized=''
+                    )
             except charting.UnchartableData as e:
                 print("** WARNING: Did not draw chart:", e)
             else:

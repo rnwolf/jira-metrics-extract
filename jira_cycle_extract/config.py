@@ -40,6 +40,7 @@ def config_to_options(data):
             'query_attribute': None,
             'fields': {},
             'known_values': {},
+            'statusmapping':[],
             'cycle': [],
 
             'max_results': 1000,
@@ -57,27 +58,35 @@ def config_to_options(data):
     if 'domain' not in options['connection']:
         raise ConfigError("No `Domain` set in the `Connection` section")
 
+    # Cach Jira query to file?
+    if 'Cache Jira' in config:
+        options['settings']['cache_jira'] = config['Cache Jira']
+    else:
+        options['settings']['cache_jira'] = None
+
+
     # Parse Queries (list of Criteria) and/or a single Criteria
+
+    def _parse_query_config(c):
+        return {
+            'value': c.get('value', None),
+            'project': c.get('project', None),
+            'issue_types': force_list(c.get('issue types', [])),
+            'valid_resolutions': force_list(c.get('valid resolutions', [])),
+            'jql_filter': c.get('jql', None)
+        }
 
     if 'queries' in config:
         options['settings']['query_attribute'] = config['queries'].get('attribute', None)
         for query in config['queries']['criteria']:
-            options['settings']['queries'].append({
-                'value': query.get('value', None),
-                'project': force_list(query.get('project', [])),
-                'issue_types': force_list(query.get('issue types', [])),
-                'valid_resolutions': force_list(query.get('valid resolutions', [])),
-                'jql_filter': query.get('jql', None)
-            })
+            options['settings']['queries'].append(
+                _parse_query_config(query)
+            )
 
     if 'criteria' in config:
-        options['settings']['queries'].append({
-            'value': config['criteria'].get('value', None),
-            'project': force_list(config['criteria'].get('project', [])),
-            'issue_types': force_list(config['criteria'].get('issue types', [])),
-            'valid_resolutions': force_list(config['criteria'].get('valid resolutions', [])),
-            'jql_filter': config['criteria'].get('jql', None)
-        })
+        options['settings']['queries'].append(
+            _parse_query_config(config['criteria'])
+        )
 
     if len(options['settings']['queries']) == 0:
         raise ConfigError("No `Criteria` or `Queries` section found")
@@ -90,6 +99,11 @@ def config_to_options(data):
     if len(config['workflow'].keys()) < 2:
         raise ConfigError("`Workflow` section must contain at least two statuses")
 
+    # If it in the config file get column state mappings
+    if 'Workflow StatusTypes Mapping' in config:
+        options['settings']['statusmapping'] = dict(config['Workflow StatusTypes Mapping'])
+
+    # TODO Remove this soon
     # Point at which we commit to working on the issue
     if 'commitment point' in config:
         options['settings']['commitment_point_workflow_status'] = config['commitment point']
@@ -98,26 +112,27 @@ def config_to_options(data):
     for name, statuses in config['workflow'].items():
         statuses = force_list(statuses)
 
+        # TODO Remove this soon
         if name == options['settings']['commitment_point_workflow_status']:
             passed_commitment_point = True
 
-        if not passed_commitment_point:
-            options['settings']['cycle'].append({
-            "name": name,
-            "type": StatusTypes.backlog,
-            "statuses": statuses
-            })
-        else:  # passed_commitment_point:
-            options['settings']['cycle'].append({
-            "name": name,
-            "type": StatusTypes.accepted,
-            "statuses": statuses
-            })
+        try:
+            status = options['settings']['statusmapping'].get(name)
+        except AttributeError:
+            status = 'committed'
 
-    # First one is always of status backlog
-    options['settings']['cycle'][0]['type'] = StatusTypes.backlog
-    # Last one is always of status complete
-    options['settings']['cycle'][-1]['type'] = StatusTypes.complete
+        options['settings']['cycle'].append({
+        "name": name,
+        #"type": StatusTypes.accepted,
+        "type": status,
+        "statuses": statuses
+        })
+
+    if not 'Workflow StatusTypes Mapping' in config:
+        # First one is always of status backlog
+        options['settings']['cycle'][0]['type'] = StatusTypes.backlog
+        # Last one is always of status complete
+        options['settings']['cycle'][-1]['type'] = StatusTypes.complete
 
     # Parse attributes (fields)
 
