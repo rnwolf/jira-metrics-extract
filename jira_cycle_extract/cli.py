@@ -5,6 +5,7 @@ import json
 import datetime
 import base64
 import sys
+from future.utils import iteritems
 
 import dateutil.parser
 from dateparser import parse as relative_parser
@@ -206,7 +207,7 @@ def main():
 
 
     if options['settings']['statusmapping']:
-        for key, state in options['settings']['statusmapping'].iteritems():  # use .items() for python 3
+        for key, state in iteritems(options['settings']['statusmapping']): #  # use .items() for python 3  and iteritems() for python 2
             if state == 'complete':
                 done_column = key
             if state == 'final':

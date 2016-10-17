@@ -4,6 +4,7 @@ import numpy as np
 import os
 import datetime
 import csv
+import pytz
 
 class StatusTypes:
     open = 'open'
@@ -119,6 +120,8 @@ class CycleTimeQueries(QueryManager):
             'completed_timestamp': {'data': [], 'dtype': 'datetime64[ns]'}
         }
 
+        size_series = pd.DataFrame( columns=["key",'size','fromDate','toDate'])
+
         for cycle_name in cycle_names:
             series[cycle_name] = {'data': [], 'dtype': 'datetime64[ns]'}
 
@@ -157,6 +160,17 @@ class CycleTimeQueries(QueryManager):
 
                     for cycle_name in cycle_names:
                         item[cycle_name] = None
+                    # print("--- Size Changes-->")
+                    # rows = []
+                    # for snapshot in self.iter_size_changes(issue):
+                    #     data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
+                    #     rows.append(data)
+                    # df = pd.DataFrame(rows)
+                    # df_toDate=df['fromDate'].shift(-1)
+                    # df_toDate.loc[len(df_toDate)-1] = datetime.datetime.now(pytz.utc)
+                    # df['toDate'] = df_toDate
+                    # print(df)
+                    # size_series.append(df, ignore_index=True) #Does a copy expensive. ouch!
 
                     # Record date of status changes
                     for snapshot in self.iter_changes(issue, False):
@@ -216,6 +230,10 @@ class CycleTimeQueries(QueryManager):
                         ['cycle_time', 'completed_timestamp'] +
                         cycle_names
             )
+
+            print("Size data for all issues")
+            print(size_series)
+
             if createJiraCache:
                 result.to_pickle(self.settings['cache_jira'])
             return result

@@ -35,6 +35,25 @@ class IssueSnapshot(object):
             self.change, self.key, self.date.isoformat(), self.status, self.resolution, self.is_resolved
         )
 
+class IssueSizeSnapshot(object):
+    """A snapshot of the key fields of an issue at a point in its change history when its size changed
+    """
+
+    def __init__(self, change, key, date,size=None):
+        self.change = change
+        self.key = key
+        self.date = date.astimezone(dateutil.tz.tzutc())
+        self.size = size
+
+    def __hash__(self):
+        return hash(self.key)
+
+    def __repr__(self):
+        return "<IssueSnapshot change=%s key=%s date=%s size=%s>" % (
+            self.change, self.key, self.date.isoformat(), self.size
+        )
+
+
 class QueryManager(object):
     """Manage and execute queries
     """
@@ -96,6 +115,44 @@ class QueryManager(object):
                 pass
 
         return value
+
+    def iter_size_changes(self, issue):
+        """Yield an IssueSnapshot for each time the issue size changed
+        """
+
+        # Find the first size change, if any
+        size_changes = list(filter(
+            lambda h: h.field == 'Story Points',
+            itertools.chain.from_iterable([c.items for c in issue.changelog.histories])
+        ))
+        size = (size_changes[0].fromString) if len(size_changes) > 0 else None
+
+        # Issue was created
+        yield IssueSizeSnapshot(
+            change=None,
+            key=issue.key,
+            date=dateutil.parser.parse(issue.fields.created),
+            size=size
+        )
+
+        for change in issue.changelog.histories:
+            change_date = dateutil.parser.parse(change.created)
+
+            #sizes = list(filter(lambda i: i.field == 'Story Points', change.items))
+            #is_resolved = (sizes[-1].to is not None) if len(sizes) > 0 else is_resolved
+
+            for item in change.items:
+                if item.field == 'Story Points':
+                    # StoryPoints value was changed
+                    size = item.toString
+                    yield IssueSizeSnapshot(
+                        change=item.field,
+                        key=issue.key,
+                        date=change_date,
+                        size=size
+                    )
+
+
 
     def iter_changes(self, issue, include_resolution_changes=True):
         """Yield an IssueSnapshot for each time the issue changed status or
