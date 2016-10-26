@@ -24,4 +24,3 @@ statsmodels
 tlslite
 dateparser
 future
-functools

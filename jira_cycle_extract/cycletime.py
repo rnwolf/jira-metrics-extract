@@ -415,7 +415,7 @@ class CycleTimeQueries(QueryManager):
         timenowstr = datetime.datetime.now().strftime('-run-%H-%M-%S')
         for date_index,statechangedate in enumerate(state_changes_on_dates):
             if date_index%10 == 0: # Print out Progress every tenth
-                print("CFD state change {} of {} ".format(date_index,len(state_changes_on_dates)))
+                pass #print("CFD state change {} of {} ".format(date_index,len(state_changes_on_dates)))
             if type(statechangedate.date()) == datetime.date:
                 # filterdate.year,filterdate.month,filterdate.day
                 filterdate = datetime.date(statechangedate.year, statechangedate.month,
