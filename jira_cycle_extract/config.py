@@ -103,18 +103,8 @@ def config_to_options(data):
     if 'Workflow StatusTypes Mapping' in config:
         options['settings']['statusmapping'] = dict(config['Workflow StatusTypes Mapping'])
 
-    # TODO Remove this soon
-    # Point at which we commit to working on the issue
-    if 'commitment point' in config:
-        options['settings']['commitment_point_workflow_status'] = config['commitment point']
-
-    passed_commitment_point = False
     for name, statuses in config['workflow'].items():
         statuses = force_list(statuses)
-
-        # TODO Remove this soon
-        if name == options['settings']['commitment_point_workflow_status']:
-            passed_commitment_point = True
 
         try:
             status = options['settings']['statusmapping'].get(name)
