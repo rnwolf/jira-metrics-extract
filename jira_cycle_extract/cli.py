@@ -40,6 +40,8 @@ def create_argument_parser():
     parser.add_argument('--throughput', metavar='throughput.csv', help='Calculate daily throughput data and write to file. Hint: Plot as a column chart.')
     parser.add_argument('--percentiles', metavar='percentiles.csv', help='Calculate cycle time percentiles and write to file.')
     parser.add_argument('--burnup-forecast', metavar='burnup_forecast.csv', help='Calculate forecasted dates percentiles and write to file.')
+    parser.add_argument('--size-history', metavar='size_history.csv',
+                        help='Get Story Points history and write to file.')
 
     parser.add_argument('--quantiles', metavar='0.3,0.5,0.75,0.85,0.95', help="Quantiles to use when calculating percentiles")
     parser.add_argument('--backlog-column', metavar='<name>', help="Name of the backlog column. Defaults to the first column.")
@@ -174,15 +176,23 @@ def main():
         q = CycleTimeQueries(jira, **options['settings'])
 
         print("Fetching issues (this could take some time)")
-        cycle_data = q.cycle_data(verbose=args.verbose)
+        cycle_data = pd.DataFrame()
+        size_data = pd.DataFrame()
+        cycle_data, size_data =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data)
+        if args.points:
+            print("Working out size changes of issues over time")
+            df_size_history = q.size_history(size_data)
+            df_size_history.to_csv(r'size_history.csv', sep='\t')  # Save to file.
+        else:
+            df_size_history = None
     except JIRAError as e:
         eprint(e)
         return 1
 
 
     #cfd_data = q.cfd(cycle_data)
-    cfd_data = q.cfd(cycle_data, args.points, stacked=False)
-    cfd_data_stackable = q.cfd(cycle_data, args.points, stacked=True)
+    cfd_data = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=False)
+    cfd_data_stackable = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=True)
 
     scatter_data = q.scatterplot(cycle_data)
     histogram_data = q.histogram(cycle_data)
@@ -272,7 +282,7 @@ def main():
         elif output_format == 'xlsx':
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
-            cycle_data.to_csv(args.output, columns=columns, header=header, date_format='%Y-%m-%d', index=False)
+            cycle_data.to_csv(args.output, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t')
 
     if args.records:
         if output_format == 'json':
@@ -281,6 +291,16 @@ def main():
         else:
             print("Warning: Ignoring cycle data as JSON records. Use --format json")
 
+
+    if args.size_history:
+        print("Writing issue size history data to", args.size_history)
+        if output_format == 'json':
+            size_data.to_json(args.size_history, date_format='iso')
+        elif output_format == 'xlsx':
+            size_data.to_excel(args.size_history, 'SIZES')
+        else:
+            size_data.to_csv(args.size_history, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d')
+
     if args.cfd:
         print("Writing Cumulative Flow Diagram data to", args.cfd)
         if output_format == 'json':
@@ -288,7 +308,7 @@ def main():
         elif output_format == 'xlsx':
             cfd_data.to_excel(args.cfd, 'CFD')
         else:
-            cfd_data.to_csv(args.cfd)
+            cfd_data.to_csv(args.cfd, sep='\t')
 
     if args.scatterplot:
         print("Writing cycle time scatter plot data to", args.scatterplot)
@@ -297,7 +317,7 @@ def main():
         elif output_format == 'xlsx':
             scatter_data.to_excel(args.scatterplot, 'Scatter', index=False)
         else:
-            scatter_data.to_csv(args.scatterplot, index=False)
+            scatter_data.to_csv(args.scatterplot, index=False, sep='\t')
 
     if args.percentiles:
         print("Writing cycle time percentiles", args.percentiles)
@@ -306,7 +326,7 @@ def main():
         elif output_format == 'xlsx':
             percentile_data.to_frame(name='percentiles').to_excel(args.percentiles, 'Percentiles', header=True)
         else:
-            percentile_data.to_csv(args.percentiles, header=True)
+            percentile_data.to_csv(args.percentiles, header=True, sep='\t')
 
     if args.histogram:
         print("Writing cycle time histogram data to", args.histogram)
@@ -315,7 +335,7 @@ def main():
         elif output_format == 'xlsx':
             histogram_data.to_frame(name='histogram').to_excel(args.histogram, 'Histogram', header=True)
         else:
-            histogram_data.to_csv(args.histogram, header=True)
+            histogram_data.to_csv(args.histogram, header=True, sep='\t')
 
     if args.throughput:
         print("Writing throughput data to", args.throughput)
@@ -324,7 +344,7 @@ def main():
         elif output_format == 'xlsx':
             daily_throughput_data.to_excel(args.throughput, 'Throughput', header=True)
         else:
-            daily_throughput_data.to_csv(args.throughput, header=True)
+            daily_throughput_data.to_csv(args.throughput, header=True, sep='\t')
 
     if args.burnup_forecast and burnup_forecast_data is not None:
         print("Writing burnup forecast data to", args.burnup_forecast)
@@ -333,7 +353,7 @@ def main():
         elif output_format == 'xlsx':
             burnup_forecast_data.to_excel(args.burnup_forecast_data, 'Forecast', header=True)
         else:
-            burnup_forecast_data.to_csv(args.burnup_forecast_data, header=True)
+            burnup_forecast_data.to_csv(args.burnup_forecast_data, header=True, sep='\t')
 
 
     # Output charts (if we have the right things installed)

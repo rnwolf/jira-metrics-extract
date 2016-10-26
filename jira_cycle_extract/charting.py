@@ -159,6 +159,9 @@ def throughput_chart(throughput_data, title=None, ax=None):
     return ax
 
 def throughput_trend_chart(throughput_data, title=None, ax=None):
+
+    if throughput_data is None:
+        raise UnchartableData("Cannot draw throughput chart with no completed items")
     if len(throughput_data.index) == 0:
         raise UnchartableData("Cannot draw throughput chart with no completed items")
 
@@ -270,6 +273,8 @@ def burnup_forecast(
 
     if len(cfd_data.index) == 0:
         raise UnchartableData("Cannot draw burnup forecast chart with no data")
+    if throughput_data is None:
+        raise UnchartableData("Cannot draw burnup forecast chart with no completed items")
     if len(throughput_data.index) == 0:
         raise UnchartableData("Cannot draw burnup forecast chart with no completed items")
 

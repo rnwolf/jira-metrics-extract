@@ -5,6 +5,7 @@ import os
 import datetime
 import csv
 import pytz
+import tempfile
 
 class StatusTypes:
     open = 'open'
@@ -79,8 +80,10 @@ class CycleTimeQueries(QueryManager):
 
         super(CycleTimeQueries, self).__init__(jira, **settings)
 
-    def cycle_data(self, verbose=False):
-        """Build a numerically indexed data frame with the following 'fixed'
+    def cycle_data(self, verbose=False, result_cycle=None, result_size=None):
+        """Get data from JIRA for cycle/flow times and story points size change.
+
+        Build a numerically indexed data frame with the following 'fixed'
         columns: `key`, 'url', 'issue_type', `summary`, `status`, and
         `resolution` from JIRA, as well as the value of any fields set in
         the `fields` dict in `settings`. If `known_values` is set (a dict of
@@ -103,6 +106,8 @@ class CycleTimeQueries(QueryManager):
 
         If an item moves backwards through the cycle, subsequent date/time
         stamps in the cycle are erased.
+
+
         """
 
         cycle_names = [s['name'] for s in self.settings['cycle']]
@@ -120,7 +125,9 @@ class CycleTimeQueries(QueryManager):
             'completed_timestamp': {'data': [], 'dtype': 'datetime64[ns]'}
         }
 
-        size_series = pd.DataFrame( columns=["key",'size','fromDate','toDate'])
+        buffer = tempfile.SpooledTemporaryFile(max_size=20000,mode='w+t')
+        df_size_history = pd.DataFrame( columns=['key','fromDate','toDate','size'])
+        df_size_history.to_csv(buffer, columns=['key', 'fromDate', 'toDate', 'size'], header=True, index=None, sep='\t',encoding='utf-8')
 
         for cycle_name in cycle_names:
             series[cycle_name] = {'data': [], 'dtype': 'datetime64[ns]'}
@@ -131,123 +138,167 @@ class CycleTimeQueries(QueryManager):
         if self.settings['query_attribute']:
             series[self.settings['query_attribute']] = {'data': [], 'dtype': str}
 
-        createJiraCache = False
-        if self.settings['cache_jira']:
-            if not os.path.exists(self.settings['cache_jira']):
-                createJiraCache = True
+        for criteria in self.settings['queries']:
+            for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
 
+                item = {
+                    'key': issue.key,
+                    'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
+                    'issue_type': issue.fields.issuetype.name,
+                    'summary': issue.fields.summary.encode('utf-8'),
+                    'status': issue.fields.status.name,
+                    'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
+                    'cycle_time': None,
+                    'completed_timestamp': None
+                }
 
-        if (self.settings['cache_jira'] == None ) or createJiraCache:
-            for criteria in self.settings['queries']:
-                for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
+                for name, field_name in self.fields.items():
+                    item[name] = self.resolve_field_value(issue, name, field_name)
 
-                    item = {
-                        'key': issue.key,
-                        'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
-                        'issue_type': issue.fields.issuetype.name,
-                        'summary': issue.fields.summary.encode('utf-8'),
-                        'status': issue.fields.status.name,
-                        'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
-                        'cycle_time': None,
-                        'completed_timestamp': None
-                    }
+                if self.settings['query_attribute']:
+                    item[self.settings['query_attribute']] = criteria.get('value', None)
 
-                    for name, field_name in self.fields.items():
-                        item[name] = self.resolve_field_value(issue, name, field_name)
+                for cycle_name in cycle_names:
+                    item[cycle_name] = None
 
-                    if self.settings['query_attribute']:
-                        item[self.settings['query_attribute']] = criteria.get('value', None)
+                # Get Story Points size changes history
+                rows = []
+                for snapshot in self.iter_size_changes(issue):
+                    data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
+                    rows.append(data)
+                df = pd.DataFrame(rows)
+                # Create the toDate column
+                df_toDate=df['fromDate'].shift(-1)
+                df_toDate.loc[len(df_toDate)-1] = datetime.datetime.now(pytz.utc)
+                df['toDate'] = df_toDate
+                # Round Down datetimes to full dates
+                df['fromDate'] = df['fromDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
+                df['toDate'] = df['toDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
+                # Append to csv file
+                df.to_csv(buffer, columns=['key', 'fromDate', 'toDate', 'size'], header=None,
+                           mode='a', sep='\t', date_format='%Y-%m-%d',encoding='utf-8')
+                #print(rows)
 
+                # Record date of status changes
+                for snapshot in self.iter_changes(issue, False):
+                    snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
+                    if snapshot_cycle_step is None:
+                        if verbose:
+                            print(issue.key, "transitioned to unknown JIRA status", snapshot.status)
+                        continue
+
+                    snapshot_cycle_step_name = snapshot_cycle_step['name']
+
+                    # Keep the first time we entered a step
+                    if item[snapshot_cycle_step_name] is None:
+                        item[snapshot_cycle_step_name] = snapshot.date
+
+                    # Wipe any subsequent dates, in case this was a move backwards
+                    found_cycle_name = False
                     for cycle_name in cycle_names:
-                        item[cycle_name] = None
-                    # print("--- Size Changes-->")
-                    # rows = []
-                    # for snapshot in self.iter_size_changes(issue):
-                    #     data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
-                    #     rows.append(data)
-                    # df = pd.DataFrame(rows)
-                    # df_toDate=df['fromDate'].shift(-1)
-                    # df_toDate.loc[len(df_toDate)-1] = datetime.datetime.now(pytz.utc)
-                    # df['toDate'] = df_toDate
-                    # print(df)
-                    # size_series.append(df, ignore_index=True) #Does a copy expensive. ouch!
-
-                    # Record date of status changes
-                    for snapshot in self.iter_changes(issue, False):
-                        snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
-                        if snapshot_cycle_step is None:
-                            if verbose:
-                                print(issue.key, "transitioned to unknown JIRA status", snapshot.status)
+                        if not found_cycle_name and cycle_name == snapshot_cycle_step_name:
+                            found_cycle_name = True
                             continue
+                        elif found_cycle_name and item[cycle_name] is not None:
+                            if verbose:
+                                print(issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name)
+                            item[cycle_name] = None
 
-                        snapshot_cycle_step_name = snapshot_cycle_step['name']
+                # Wipe timestamps if items have moved backwards; calculate cycle time
 
-                        # Keep the first time we entered a step
-                        if item[snapshot_cycle_step_name] is None:
-                            item[snapshot_cycle_step_name] = snapshot.date
+                previous_timestamp = None
+                accepted_timestamp = None
+                completed_timestamp = None
 
-                        # Wipe any subsequent dates, in case this was a move backwards
-                        found_cycle_name = False
-                        for cycle_name in cycle_names:
-                            if not found_cycle_name and cycle_name == snapshot_cycle_step_name:
-                                found_cycle_name = True
-                                continue
-                            elif found_cycle_name and item[cycle_name] is not None:
-                                if verbose:
-                                    print(issue.key, "moved backwards to", snapshot_cycle_step_name, "wiping date for subsequent step", cycle_name)
-                                item[cycle_name] = None
+                for cycle_name in cycle_names:
+                    if item[cycle_name] is not None:
+                        previous_timestamp = item[cycle_name]
 
-                    # Wipe timestamps if items have moved backwards; calculate cycle time
+                        if accepted_timestamp is None and previous_timestamp is not None and cycle_name in accepted_steps:
+                            accepted_timestamp = previous_timestamp
+                        if completed_timestamp is None and previous_timestamp is not None and cycle_name in completed_steps:
+                            completed_timestamp = previous_timestamp
 
-                    previous_timestamp = None
-                    accepted_timestamp = None
-                    completed_timestamp = None
+                if accepted_timestamp is not None and completed_timestamp is not None:
+                    item['cycle_time'] = completed_timestamp - accepted_timestamp
+                    item['completed_timestamp'] = completed_timestamp
 
-                    for cycle_name in cycle_names:
-                        if item[cycle_name] is not None:
-                            previous_timestamp = item[cycle_name]
+                for k, v in item.items():
+                    series[k]['data'].append(v)
 
-                            if accepted_timestamp is None and previous_timestamp is not None and cycle_name in accepted_steps:
-                                accepted_timestamp = previous_timestamp
-                            if completed_timestamp is None and previous_timestamp is not None and cycle_name in completed_steps:
-                                completed_timestamp = previous_timestamp
+        data = {}
+        for k, v in series.items():
+            data[k] = pd.Series(v['data'], dtype=v['dtype'])
 
-                    if accepted_timestamp is not None and completed_timestamp is not None:
-                        item['cycle_time'] = completed_timestamp - accepted_timestamp
-                        item['completed_timestamp'] = completed_timestamp
+        result_cycle = pd.DataFrame(data,
+                    columns=['key', 'url', 'issue_type', 'summary', 'status', 'resolution'] +
+                    sorted(self.fields.keys()) +
+                    ([self.settings['query_attribute']] if self.settings['query_attribute'] else []) +
+                    ['cycle_time', 'completed_timestamp'] +
+                    cycle_names
+        )
 
-                    for k, v in item.items():
-                        series[k]['data'].append(v)
+        result_size = pd.DataFrame()
+        buffer.seek(0)
+        result_size = result_size.from_csv(buffer, sep='\t')
+        result_size.set_index('key')
+        result_size['toDate'] = pd.to_datetime(result_size['toDate'], format=('%Y-%m-%d'))
+        result_size['fromDate'] = pd.to_datetime(result_size['fromDate'], format=('%Y-%m-%d'))
 
-            data = {}
-            for k, v in series.items():
-                data[k] = pd.Series(v['data'], dtype=v['dtype'])
+        return result_cycle, result_size
 
-            result= pd.DataFrame(data,
-                columns=['key', 'url', 'issue_type', 'summary', 'status', 'resolution'] +
-                        sorted(self.fields.keys()) +
-                        ([self.settings['query_attribute']] if self.settings['query_attribute'] else []) +
-                        ['cycle_time', 'completed_timestamp'] +
-                        cycle_names
-            )
+    def size_history(self,size_data):
+        """Return the a DataFrame,
+        indexed by day, with columns containing story size for each issue.
 
-            print("Size data for all issues")
-            print(size_series)
+        In addition, columns are soted by Jira Issue key. First by Project and then by id number.
+        """
 
-            if createJiraCache:
-                result.to_pickle(self.settings['cache_jira'])
-            return result
+        def my_merge(df1, df2):
+            # http://stackoverflow.com/questions/34411495/pandas-merge-several-dataframes
+            res = pd.merge(df1, df2, how='outer', left_index=True, right_index=True)
+            cols = sorted(res.columns)
+            pairs = []
+            for col1, col2 in zip(cols[:-1], cols[1:]):
+                if col1.endswith('_x') and col2.endswith('_y'):
+                    pairs.append((col1, col2))
+            for col1, col2 in pairs:
+                res[col1[:-2]] = res[col1].combine_first(res[col2])
+                res = res.drop([col1, col2], axis=1)
+            return res
 
-        elif not createJiraCache: # Because it already exists
-            try:
-                result = pd.read_pickle(self.settings['cache_jira'])
-            except IOError:
-                print('Oh dear did not find the jira cache pickeled to :', self.settings['cache_jira'])
-            return result
+        dfs_key = []
+        # Group the dataframe by regiment, and for each regiment,
+        for name, group in size_data.groupby('key'):
+            dfs = []
+            for row in group.itertuples():
+                # print(row.Index, row.fromDate,row.toDate, row.size)
+                dates = pd.date_range(start=row.fromDate, end=row.toDate)
+                sizes = [row.size] * len(dates)
+                data = {'date': dates, 'size': sizes}
+                df2 = pd.DataFrame(data, columns=['date', 'size'])
+                pd.to_datetime(df2['date'], format=('%Y-%m-%d'))
+                df2.set_index(['date'], inplace=True)
+                dfs.append(df2)
+            # df_final = reduce(lambda left,right: pd.merge(left,right), dfs)
+            df_key = (reduce(my_merge, dfs))
+            df_key.columns = [name if x == 'size' else x for x in df_key.columns]
+            dfs_key.append(df_key)
+        df_all = (reduce(my_merge, dfs_key))
+
+        # Sort the columns based on Jira Project code and issue number
+        mykeys = df_all.columns.values.tolist()
+        mykeys.sort(key=lambda x: x.split('-')[0] + '-' + str(int(x.split('-')[1])).zfill(6))
+        df_all = df_all[mykeys]
+
+        # Reindex to make sure we have all dates
+        start, end = df_all.index.min(), df_all.index.max()
+        df_all = df_all.reindex(pd.date_range(start, end, freq='D'), method='ffill')
+
+        return df_all
 
 
-
-    def cfd(self, cycle_data,pointscolumn= None, stacked = True ):
+    def cfd(self, cycle_data,size_history= None, pointscolumn= None, stacked = True ):
         """Return the data to build a cumulative flow diagram: a DataFrame,
         indexed by day, with columns containing cumulative counts for each
         of the items in the configured cycle.
@@ -352,7 +403,7 @@ class CycleTimeQueries(QueryManager):
 
 
         if pointscolumn:
-            storypoints = cycle_data[pointscolumn]
+            storypoints = cycle_data[pointscolumn] # As at today
             ids = cycle_data['key']
 
 
@@ -361,7 +412,9 @@ class CycleTimeQueries(QueryManager):
         # For each date on which we had a issue state change we want to count and sum the totals for each of the given states
         # 'Open','Analysis','Backlog','In Process','Done','Withdrawn'
         timenowstr = datetime.datetime.now().strftime('-run-%H-%M-%S')
-        for statechangedate in state_changes_on_dates:
+        for date_index,statechangedate in enumerate(state_changes_on_dates):
+            if date_index%10 == 0: # Print out Progress every tenth
+                print("CFD state change {} of {} ".format(date_index,len(state_changes_on_dates)))
             if type(statechangedate.date()) == datetime.date:
                 # filterdate.year,filterdate.month,filterdate.day
                 filterdate = datetime.date(statechangedate.year, statechangedate.month,
@@ -371,7 +424,41 @@ class CycleTimeQueries(QueryManager):
                 df_filtered = df.applymap(lambda x: 0 if hide_greater_than_date(x, filterdate) else 1)
 
                 if pointscolumn:
-                    df_countable = pd.concat([ids, storypoints, df_filtered], axis=1)
+                    # Function to create column of sizes at a given point in time
+                    # Needs mydate and size_data
+                    # def lookup_size(x):
+                    #     # needs datevar and df_size_history
+                    #     size_data_for_key = size_data[size_data['key']==x]
+                    #
+                    #     try:
+                    #         df_filtered = size_data_for_key[size_data_for_key.apply(
+                    #             lambda row: datetime.date(row.fromDate.year, row.fromDate.month,
+                    #                                   row.fromDate.day) <= filterdate <= datetime.date(row.toDate.year,
+                    #                                                                                    row.toDate.month,
+                    #                                                                                    row.toDate.day),
+                    #             axis=1)]
+                    #     except:
+                    #         df_filtered = None
+                    #
+                    #     #df_filtered = size_data[
+                    #     #    size_data.apply(lambda row: datetime.date(row.fromDate.year, row.fromDate.month, row.fromDate.day) <= filterdate <= datetime.date(row.toDate.year, row.toDate.month, row.toDate.day), axis=1)]
+                    #     if len(df_filtered):
+                    #         key_size_value = df_filtered.iloc[-1]['size']
+                    #     else:
+                    #         key_size_value = None
+                    #     #print(key_size_value)
+                    #     return key_size_value
+
+                    #df_size_on_day = cycle_data['key'].apply(lambda row: lookup_size(row))
+                    storypoints_series_on = size_history.loc[filterdate.isoformat()].T
+                    df_size_on_day = pd.Series.to_frame(storypoints_series_on)
+                    df_size_on_day.columns = [pointscolumn]
+
+                    # Make sure get size data in the same sequence as ids.
+                    left = pd.Series.to_frame(ids)
+                    right = df_size_on_day
+                    result = left.join(right, on=['key'])  # http://pandas.pydata.org/pandas-docs/stable/merging.html\
+                    df_countable = pd.concat([result, df_filtered], axis=1)
                 else:
                     df_countable = df_filtered
 
@@ -392,7 +479,7 @@ class CycleTimeQueries(QueryManager):
                 #file_name="countable-cfd-for-day-"+ filterdate.isoformat()+timenowstr+".csv"
                 #df_countable.to_csv(file_name, sep='\t', lineterminator='\n', encoding='utf-8', quoting=csv.QUOTE_ALL)
 
-                df_slice = df_countable.loc[:,slice_columns]
+                df_slice = df_countable.loc[:,slice_columns].copy()
                 df_sub_sum = cumulativeColumnStates(df_slice,stacked)
                 final_table = df_sub_sum.rename(index={0: filterdate})
 
@@ -435,6 +522,9 @@ class CycleTimeQueries(QueryManager):
         'sum', where sum is the sum of value specified by pointscolumn. Expected to be 'StoryPoints'
         completed at that timestamp (e.g. daily).
         """
+        if len(cycle_data)<1:
+           return None # Note completed items yet, return None
+
         if pointscolumn:
             return cycle_data[['completed_timestamp', pointscolumn]] \
                 .rename(columns={pointscolumn: 'sum'}) \
