@@ -6,6 +6,7 @@ import datetime
 import csv
 import pytz
 import tempfile
+from functools import reduce
 
 class StatusTypes:
     open = 'open'
