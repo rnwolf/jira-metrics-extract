@@ -1,7 +1,7 @@
 FROM python:2-onbuild
-MAINTAINER Martin Aspeli <optilude@gmail.com>
+MAINTAINER Rudiger Wolf <rudiger.wolf@throughputfocus.com>
 
 WORKDIR /data
 VOLUME /data
 
-ENTRYPOINT [ "jira-cycle-extract" ]
+ENTRYPOINT [ "jira-metrics-extract" ]

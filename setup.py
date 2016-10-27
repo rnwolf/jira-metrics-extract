@@ -9,15 +9,15 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='jira-cycle-extract',
+    name='jira-metrics-extract',
     version='0.11',
-    description='Extract cycle time analytics data from JIRA',
+    description='Extract agile metrics data from JIRA',
     long_description=long_description,
-    author='Martin Aspeli',
-    author_email='optilude@gmail.com',
-    url='https://github.com/optilude/jira-cycle-extract',
+    author='Rudiger Wolf',
+    author_email='rudiger.wolf@throughputfocus.com',
+    url='https://github.com/rnwolf/jira-metrics-extract',
     license='MIT',
-    keywords='agile jira analytics',
+    keywords='agile metrics jira analytics kanban cfd',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=[
         'jira',
@@ -37,7 +37,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'jira-cycle-extract=jira_cycle_extract.cli:main',
+            'jira-metrics-extract=jira_metrics_extract.cli:main',
         ],
     },
 )

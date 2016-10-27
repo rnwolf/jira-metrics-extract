@@ -1,9 +1,11 @@
-JIRA Cycle Data extract utility
+JIRA Metrics Data extract utility
 ===============================
 
 This utility helps extract data from JIRA for processing with the
 ActionableAgile™ Analytics tool (https://www.actionableagile.com/analytics-tools/),
 as well as ad-hoc analysis using Excel.
+
+This version of the tool is a fork from Martin (https://github.com/optilude/jira-cycle-extract). It has been modified to produce metrics based on issue sizes in adition to the existing metrics based on issue counts. Additional exports of issue data size changes enable easier backlog change analysis.
 
 It will produce a CSV file with one row for each JIRA issue matching a set of
 filter criteria, containing basic information about the issue as well as the
@@ -21,30 +23,41 @@ charts as images.
 Installation
 ------------
 
-Install Python 2.7 and pip. See http://pip.readthedocs.org/en/stable/installing/.
+Install Python 2.7 or Python 3.5 and pip. See http://pip.readthedocs.org/en/stable/installing/.
 
 Install using `pip`::
 
-    $ pip install jira-cycle-extract
+    $ pip install jira-metrics-extract
 
-If you get errors, try to install `numpy` and `pandas` separately first::
+To install cli and all dependencies down load the requirements.txt file and then install using `pip`::
 
-    $ pip install numpy pandas
-    $ pip install jira-cycle-extract
+    $ pip install -r requirements.txt
 
-This will install a binary called `jira-cycle-extract`. You can test that it was
+This will install a binary called `jira-metrics-extract`. You can test that it was
 correctly installed using::
 
-    $ jira-cycle-extract --help
+    $ jira-metrics-extract --help
 
-If this doesn't work, check the output of `pip install jira-cycle-extract` to
-see where it may have installed the binary.
+If you are using Anaconda then download environment.yml.
 
-To use the built-in charting capabilities, you need to install Seaborn
+Install using `conda`::
+
+    $ conda env create -f environment.yml
+
+Activate the new environment:
+
+Linux, OS X: source activate jira-metrics
+Windows: activate jira-metrics
+
+You can test that it was correctly installed using::
+
+    $ jira-metrics-extract --help
+
+If you only installed the jira-metrics-extract with pip and you want to use the built-in charting capabilities, then you need to install Seaborn
 (which in turn installs Matplotlib and SciPy) and Statsmodels. You can get
 these with the `charting` extra::
 
-    $ pip install jira-cycle-extract[charting]
+    $ pip install jira-metrics-extract[charting]
 
 These dependencies are not installed by default because they can sometimes
 be a bit tricky to install.
@@ -52,68 +65,151 @@ be a bit tricky to install.
 Using Docker
 ------------
 
-If you have Docker installed, you can run `jira-cycle-extract` as a docker image::
+If you have Docker installed, you can run `jira-metrics-extract` as a docker image::
 
-    $ docker run --rm -it -v "$PWD":/data optilude/jira-cycle-extract:latest --help
+    $ docker run --rm -it -v "$PWD":/data optilude/jira-metrics-extract:latest --help
 
 This will map the working directory (`/data`) of the containerised
 application to the current working directory (`$PWD`). Any files you
 specify on the command line (without any further path prefixes) will be
 read from or output to the current directory, e.g::
 
-    $ docker run --rm -it -v "$PWD":/data optilude/jira-cycle-extract:latest config.yml cycle.csv
+    $ docker run --rm -it -v "$PWD":/data myhomedir/jira-metrics-extract:latest config.yml cycle.csv
 
 Configuration
 -------------
 
 Write a YAML configuration file like so, calling it e.g. `config.yaml`::
 
-    # How to connect to JIRA?
-    Connection:
-        Domain: https://myserver.atlassian.net
-        Username: myusername # If missing, you will be prompted at runtime
-        Password: secret     # If missing, you will be prompted at runtime
+        # How to connect to JIRA?
+        Connection:
+            Domain: https://myserver.atlassian.net/
+            Username: myusername # If missing or and not in an environment var, you will be prompted at runtime
+            Password: secret     # If missing or and not in an environment var, you will be prompted at runtime
 
-    # What to search for?
-    Criteria:
-        Project: ABC # JIRA project key to search
-        Issue types: # Which issue types to include
-            - Story
-            - Defect
-        Valid resolutions: # Which resolution statuses to include (unresolved is always included)
-            - Done
-            - Closed
-        JQL: labels != "Spike" # Additional filter as raw JQL, optional
+        #Criteria:
+        #    Project:
+        #        - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+        #    Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+        #        - Delivery Story
+        #        - Bug
+        #    Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+        #        - SIGNED OFF
+        #        - DONE
+        #    JQL:  fixVersion = "ATCM Release 1.0" and priority = Must  AND status != Withdrawn
+        #    # Additional filter as raw JQL, optional  eg labels != "Spike"
 
-    # Describe the workflow. Each step can be mapped to either a single JIRA
-    # status, or a list of statuses that will be treated as equivalent
-    Workflow:
-        Open: Open
-        Analysis IP: Analysis in Progress
-        Analysis Done: Analysis Done
-        Development IP: Development in Progress
-        Development Done: Development Done
-        Test IP: Test in Progress
-        Test Done: Test Done
-        Done:
-            - Closed
-            - Done
+        #Criteria:
+        #     Project:
+        #        - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+        #     Issue types:
+        #        - Delivery Story
+        #        - NFR
+        #     Valid resolutions:
+        #        - SIGNED OFF
+        #        - DONE
+        #     JQL: fixVersion = "ATCM Release 1.0" 
 
-    # Map field names to additional attributes to extract
-    Attributes:
-        Components: Component/s
-        Priority: Priority
-        Release: Fix version/s
+        # Compound query when work done by multiple teams as part of a larger programme.
+        Queries:
+            Attribute: ATCM
+            Criteria:
+                - Value: Team ATCM
+                  Project:
+                      - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+                  Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+                      - Delivery Story
+                      - Bug
+                  Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+                      - SIGNED OFF
+                      - DONE
+                  JQL:  fixVersion = "ATCM Release 1.0" and priority = Must  AND status != Withdrawn
 
-    # These can be overridden by command line options
-    Max Results: 100
-    Quantiles:
-        - 0.5
-        - 0.85
-        - 0.95
-    # This could be date (e.g. 8th Aug 2016) or relative date as in example below
-    Charts From: 1 month ago
-    Charts To: today 
+                - Value: Team NFR
+                  Project:
+                      - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+                  Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+                      - NFR
+                  Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+                      - SIGNED OFF
+                      - DONE
+                  JQL: fixVersion = "ATCM Release 1.0" and priority = Must AND status != Withdrawn
+
+        # Describe the workflow. Each step can be mapped to either a single JIRA
+        # status, or a list of statuses that will be treated as equivalent
+        # At least two steps are required. Specify the steps in order.
+
+        Workflow:
+            Open:
+              - OPEN
+              - To Do
+              - New
+              - Not Started
+              - Parked
+            Analysis:
+              - REFINE
+              - CANDIDATE FOR SPRINT
+              - REFINE
+              - Research
+            Committed:
+              - READY FOR SPRINT
+              - Prioritised
+            Develop:
+              - Reopened
+              - BUILD
+              - DEVELOPMENT COMPLETE
+              - READY FOR BPO SIGN OFF
+              - BLOCKED
+              - Awaiting review
+              - In Progress
+              - In review
+              - Ready to Test
+              - Awaiting Sign Off
+              - In QA
+              - Integrated
+              - Reviewed
+              - In Acceptance
+              - Story Development
+              - Doing
+            Done:
+              - BUILD TO RELEASE
+              - HASS QA
+              - READY FOR LIVE
+              - DONE
+              - Closed
+              - Resolved
+              - Signed Off
+
+        # High level Actionable Agile Metrics approach to viewing work flow
+        # Map key columns to open, backlog, committed, final, complete, abandoned
+        Workflow StatusTypes Mapping:
+            Open: open
+            Analysis : backlog
+            Committed : committed
+            Develop : final
+            Done : complete
+
+        # Map field names to additional attributes to extract
+        Attributes:
+            #Components: Component/s
+            #Priority: Priority
+            Release: Fix version/s
+            StoryPoints: Story Points
+            Labels: labels
+
+        #Known values:
+        #    Release:
+        #        - "ABC Release 1.0"
+
+        # Additional parameters that can be overridden by command line options
+        Max Results: 1000
+        Quantiles:
+            - 0.5
+            - 0.85
+            - 0.95
+        # This could be date (e.g. 8th Aug 2016) or relative date as in example below
+        Charts From: 1 month ago
+        Charts To: today 
 
 If you are unfamiliar with YAML, remember that:
 
@@ -131,7 +227,8 @@ If you are unfamiliar with YAML, remember that:
 The sections for `Connection`, `Criteria` and `Workflow` are required.
 
 Under `Conection`, only `Domain` is required. If not specified, the script will
-prompt for both or either of username and password when run.
+look for environment variables and if those are not found it will prompt for 
+both or either of username and password when run.
 
 Under `Criteria`, all fields are technically optional, but you should specify
 at least some of them to avoid an unbounded query. `Issue types` and
@@ -218,10 +315,10 @@ the known values match, the cell will be empty.
 Running
 -------
 
-To produce the basic cycle time data, run `jira-cycle-extract` passing the name
+To produce the basic cycle time data, run `jira-metics-extract` passing the name
 of the YAML configuration file and the name of the output CSV file::
 
-    $ jira-cycle-extract config.yaml data.csv
+    $ jira-metrics-extract config.yaml data.csv
 
 This will extract a CSV file called `data.csv` with cycle data based on the
 configuration in `config.yaml`, in a format compatible with the
@@ -229,11 +326,11 @@ ActionableAgile toolset.
 
 If you prefer Excel files for manual analysis::
 
-    $ jira-cycle-extract --format=xlsx config.yaml data.xlsx
+    $ jira-metrics-extract --format=xlsx config.yaml data.xlsx
 
 If you prefer JSON::
 
-    $ jira-cycle-extract --format=json config.yaml data.json
+    $ jira-metrics-extract --format=json config.yaml data.json
 
 The JSON format can be loaded by the Actionable Agile Analytics tool if you
 self-host it and the single-page HTML file for the AAA tool and the JSON file
@@ -252,7 +349,7 @@ format you should also make sure all output files use a `.xlsx` extension.
 
 There are lots more options. See::
 
-    $ jira-cycle-extract --help
+    $ jira-metrics-extract --help
 
 Use the `-v` option to print more information during the extract process.
 
@@ -260,11 +357,11 @@ Use the `-n` option to limit the number of items fetched from JIRA, based on
 the most recently updated issues. This is useful for testing the configuration
 without waiting for long downloads::
 
-    $ jira-cycle-extract -v -n 10 config.yaml data.csv
+    $ jira-metrics-extract -v -n 10 config.yaml data.csv
 
 To produce **Cumulative Flow Diagram statistics**, use the `--cfd` option::
 
-    $ jira-cycle-extract --cfd cfd.csv config.yaml data.csv
+    $ jira-metrics-extract --cfd cfd.csv config.yaml data.csv
 
 This will yield a `cfd.csv` file with one row for each date, one column for each
 step in the workflow, and a count of the number of issues in that workflow state
@@ -274,7 +371,7 @@ backlog!
 
 To produce **cycle time scatter plot statistics**, use the `--scatterplot` option::
 
-    $ jira-cycle-extract --scatterplot scatterplot.csv config.yaml data.csv
+    $ jira-metrics-extract --scatterplot scatterplot.csv config.yaml data.csv
 
 This will yield a `scatterplot.csv` file with one row for each item that was
 completed (i.e. it reached the last workflow state), with columns giving the
@@ -288,7 +385,7 @@ metadata to allow further filtering.
 To be able to easily draw a **histogram** of the cycle time values, use the
 `--histogram` option::
 
-    $ jira-cycle-extract --histogram histogram.csv config.yaml data.csv
+    $ jira-metrics-extract --histogram histogram.csv config.yaml data.csv
 
 This will yield a `histogram.csv` file with two columns: bin ranges and the
 number of items with cycle times falling within each bin. These can be charted
@@ -297,22 +394,22 @@ as a column or bar chart.
 To find out the 30th, 50th, 70th, 85th and 95th **percentile cycle time** values,
 pass the `--percentiles` option::
 
-    $ jira-cycle-extract --percentiles percentiles.csv config.yaml data.csv
+    $ jira-metrics-extract --percentiles percentiles.csv config.yaml data.csv
 
 To calculate different percentiles use the `--quantiles` option::
 
-    $ jira-cycle-extract --percentiles percentiles.csv --quantiles=0.3,0.5,0.8 config.yaml data.csv
+    $ jira-metrics-extract --percentiles percentiles.csv --quantiles=0.3,0.5,0.8 config.yaml data.csv
 
 Note that there should not be spaces between the commas!
 
 To find out the **daily throughput** for the last 60 days, use the
 `--throughput` option::
 
-    $ jira-cycle-extract --throughput throughput.csv config.yaml data.csv
+    $ jira-metrics-extract --throughput throughput.csv config.yaml data.csv
 
 To use a different time window, e.g. the last 90 days::
 
-    $ jira-cycle-extract --throughput throughput.csv --throughput-window=90 config.yaml data.csv
+    $ jira-metrics-extract --throughput throughput.csv --throughput-window=90 config.yaml data.csv
 
 The various options can be used in combination, and it is technically OK to
 skip the second positional (`data.csv`) parameter (in which case the file will
@@ -321,7 +418,7 @@ not be written).
 If you have charting dependencies installed (see above), there are various
 options available to allow you to draw **charts**, for example::
 
-    $ jira-cycle-extract --charts-scatterplot=scatterplot.png config.yaml data.csv
+    $ jira-metrics-extract --charts-scatterplot=scatterplot.png config.yaml data.csv
 
 The available charts are:
 
@@ -388,7 +485,7 @@ Ad-hoc analysis
 ---------------
 
 Sometimes, you may want to perform more exploratory, ad-hoc analysis of the
-cycle data. `jira-cycle-extract` uses Python Pandas (http://pandas.pydata.org)
+cycle data. `jira-metrics-extract` uses Python Pandas (http://pandas.pydata.org)
 to do most of its heavy lifting, and Pandas provides a rich environment for
 data science.
 
@@ -409,7 +506,7 @@ makes the data available for further analysis::
     import seaborn as sns
 
     from jira import JIRA
-    from jira_cycle_extract import cycletime, config
+    from jira_metrics_extract import cycletime, config
 
     # Print charts in the notebook, using retina graphics
     %matplotlib inline
@@ -437,6 +534,7 @@ makes the data available for further analysis::
     cfd_data = q.cfd(cycle_data)
     scatter_data = q.scatterplot(cycle_data)
     histogram_data = q.histogram(cycle_data)
+    quantiles=[.5,.85,.95]
     percentile_data = q.percentiles(cycle_data, percentiles=quantiles)
     daily_throughput_data = q.throughput_data(cycle_data[cycle_data])
 
@@ -445,6 +543,13 @@ and so on).
 
 Changelog
 ---------
+
+0.11 - 27 Oct 2016
+     * Created new package jira-metrics-extract
+     * CFD can also be produced based on issue Story Points size
+     * Issue size history can be extracted and saved.
+
+     https://github.com/optilude/jira-cycle-extract
 
 0.10 - June 8 2016
     * Added title options for all charts
