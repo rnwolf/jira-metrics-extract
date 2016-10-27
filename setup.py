@@ -16,6 +16,7 @@ setup(
     author='Rudiger Wolf',
     author_email='rudiger.wolf@throughputfocus.com',
     url='https://github.com/rnwolf/jira-metrics-extract',
+    download_url = 'https://github.com/rnwolf/jira-metrics-extract/tarball/0.11',
     license='MIT',
     keywords='agile metrics jira analytics kanban cfd',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
