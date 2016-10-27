@@ -1,0 +1,4 @@
+include *.txt
+include *.yaml
+include *.yml
+include Dockerfile
