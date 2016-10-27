@@ -1,0 +1,129 @@
+        # How to connect to JIRA?
+        Connection:
+            Domain: https://myserver.atlassian.net/
+            Username: myusername # If missing or and not in an environment var, you will be prompted at runtime
+            Password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+
+        #Criteria:
+        #    Project:
+        #        - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+        #    Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+        #        - Delivery Story
+        #        - Bug
+        #    Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+        #        - SIGNED OFF
+        #        - DONE
+        #    JQL:  fixVersion = "ATCM Release 1.0" and priority = Must  AND status != Withdrawn
+        #    # Additional filter as raw JQL, optional  eg labels != "Spike"
+
+        #Criteria:
+        #     Project:
+        #        - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+        #     Issue types:
+        #        - Delivery Story
+        #        - NFR
+        #     Valid resolutions:
+        #        - SIGNED OFF
+        #        - DONE
+        #     JQL: fixVersion = "ATCM Release 1.0" 
+
+        # Compound query when work done by multiple teams as part of a larger programme.
+        Queries:
+            Attribute: ATCM
+            Criteria:
+                - Value: Team ATCM
+                  Project:
+                      - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+                  Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+                      - Delivery Story
+                      - Bug
+                  Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+                      - SIGNED OFF
+                      - DONE
+                  JQL:  fixVersion = "ATCM Release 1.0" and priority = Must  AND status != Withdrawn
+
+                - Value: Team NFR
+                  Project:
+                      - ATCM # JIRA project key. Can query across multiple projects, add additional rows.
+                  Issue types: # Which issue types to include? - Delivery Story - Task - Bug
+                      - NFR
+                  Valid resolutions: # Which resolution statuses to include (unresolved is always included)
+                      - SIGNED OFF
+                      - DONE
+                  JQL: fixVersion = "ATCM Release 1.0" and priority = Must AND status != Withdrawn
+
+        # Describe the workflow. Each step can be mapped to either a single JIRA
+        # status, or a list of statuses that will be treated as equivalent
+        # At least two steps are required. Specify the steps in order.
+
+        Workflow:
+            Open:
+              - OPEN
+              - To Do
+              - New
+              - Not Started
+              - Parked
+            Analysis:
+              - REFINE
+              - CANDIDATE FOR SPRINT
+              - REFINE
+              - Research
+            Committed:
+              - READY FOR SPRINT
+              - Prioritised
+            Develop:
+              - Reopened
+              - BUILD
+              - DEVELOPMENT COMPLETE
+              - READY FOR BPO SIGN OFF
+              - BLOCKED
+              - Awaiting review
+              - In Progress
+              - In review
+              - Ready to Test
+              - Awaiting Sign Off
+              - In QA
+              - Integrated
+              - Reviewed
+              - In Acceptance
+              - Story Development
+              - Doing
+            Done:
+              - BUILD TO RELEASE
+              - HASS QA
+              - READY FOR LIVE
+              - DONE
+              - Closed
+              - Resolved
+              - Signed Off
+
+        # High level Actionable Agile Metrics approach to viewing work flow
+        # Map key columns to open, backlog, committed, final, complete, abandoned
+        Workflow StatusTypes Mapping:
+            Open: open
+            Analysis : backlog
+            Committed : committed
+            Develop : final
+            Done : complete
+
+        # Map field names to additional attributes to extract
+        Attributes:
+            #Components: Component/s
+            #Priority: Priority
+            Release: Fix version/s
+            StoryPoints: Story Points
+            Labels: labels
+
+        #Known values:
+        #    Release:
+        #        - "ABC Release 1.0"
+
+        # Additional parameters that can be overridden by command line options
+        Max Results: 1000
+        Quantiles:
+            - 0.5
+            - 0.85
+            - 0.95
+        # This could be date (e.g. 8th Aug 2016) or relative date as in example below
+        Charts From: 1 month ago
+        Charts To: today 

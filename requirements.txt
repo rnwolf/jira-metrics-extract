@@ -2,7 +2,7 @@ cycler
 et-xmlfile
 jdcal
 jira
--e git+https://github.com/rnwolf/jira-cycle-extract.git#egg=jira_cycle_extract
+-e git+https://github.com/rnwolf/jira-metrics-extract.git#egg=jira_metrics_extract
 matplotlib==1.5.1
 numpy
 oauthlib
