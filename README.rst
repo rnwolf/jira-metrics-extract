@@ -544,12 +544,10 @@ and so on).
 Changelog
 ---------
 
-0.11 - 27 Oct 2016
-     * Created new package jira-metrics-extract
+0.12 - 27 Oct 2016
+     * Created new package jira-metrics-extract based on https://github.com/optilude/jira-cycle-extract
      * CFD can also be produced based on issue Story Points size
      * Issue size history can be extracted and saved.
-
-     https://github.com/optilude/jira-cycle-extract
 
 0.10 - June 8 2016
     * Added title options for all charts
