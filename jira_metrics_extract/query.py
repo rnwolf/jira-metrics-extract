@@ -101,7 +101,7 @@ class QueryManager(object):
             else:
                 values = [getattr(v, 'name', v) for v in value]
                 if name not in self.settings['known_values']:
-                    value = values[0]
+                    value = '|'.join([str(x) for x in values]) # values[0]
                 else:
                     try:
                         value = next(itertools.ifilter(lambda v: v in values, self.settings['known_values'][name]))

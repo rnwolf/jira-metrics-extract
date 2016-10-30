@@ -7,6 +7,7 @@ import csv
 import pytz
 import tempfile
 from functools import reduce
+import sys
 
 class StatusTypes:
     open = 'open'
@@ -142,16 +143,31 @@ class CycleTimeQueries(QueryManager):
         for criteria in self.settings['queries']:
             for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
 
-                item = {
-                    'key': issue.key,
-                    'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
-                    'issue_type': issue.fields.issuetype.name,
-                    'summary': issue.fields.summary.encode('utf-8'),
-                    'status': issue.fields.status.name,
-                    'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
-                    'cycle_time': None,
-                    'completed_timestamp': None
-                }
+                # Deal with the differences in strings between Python 2 & 3
+                if (sys.version_info > (3, 0)):
+                    # Python 3 code in this block
+                    item = {
+                        'key': issue.key,
+                        'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
+                        'issue_type': issue.fields.issuetype.name,
+                        'summary': issue.fields.summary,  # .encode('utf-8'),
+                        'status': issue.fields.status.name,
+                        'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
+                        'cycle_time': None,
+                        'completed_timestamp': None
+                    }
+                else:
+                    # Python 2 code in this block
+                    item = {
+                        'key': issue.key,
+                        'url': "%s/browse/%s" % (self.jira._options['server'], issue.key,),
+                        'issue_type': issue.fields.issuetype.name,
+                        'summary': issue.fields.summary.encode('utf-8'),
+                        'status': issue.fields.status.name,
+                        'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
+                        'cycle_time': None,
+                        'completed_timestamp': None
+                    }
 
                 for name, field_name in self.fields.items():
                     item[name] = self.resolve_field_value(issue, name, field_name)
@@ -345,6 +361,33 @@ class CycleTimeQueries(QueryManager):
             sum_row = df_result[df.columns].sum()  # Sum Columns
             return pd.DataFrame(data=sum_row).T  # Transpose into row dataframe and return
 
+        # Helper function to return the right most cells in 2D array
+        def keeprightmoststate(df):
+            """
+            Incoming matrix columns represents items in workflow states
+            States progress from left to right.
+            We what to zero out items, other than right most value.
+            :param df:
+            :return: pandas dataframe row with sum of column items
+            """
+
+            def last_number(lst):
+                if all(map(lambda x: x == 0, lst)):
+                    return 0
+                elif lst[-1] != 0:
+                    return len(lst) - 1
+                else:
+                    return last_number(lst[:-1])
+
+            def fill_others(lst):
+                new_lst = [0] * len(lst)
+                new_lst[last_number(lst)] = lst[last_number(lst)]
+                return new_lst
+
+            df_zeroed = df.fillna(value=0)  # ,inplace = True   Get rid of non numeric items. Make a ?deep? copy
+            df_result = df_zeroed.apply(lambda x: fill_others(x.values.tolist()), axis=1)
+            return df_result
+
         # Define helper function
         def hide_greater_than_date(cell, adate):
             """ Helper function to compare date values in cells
@@ -357,6 +400,21 @@ class CycleTimeQueries(QueryManager):
             if celldatetime > adate:
                 return True
             return False  # We have a date value in cell and it is less than or equal to input date
+
+        # Helper function
+        def appendDFToCSV(df, csvFilePath, sep="\t",date_format='%Y-%m-%d', encoding='utf-8'):
+            import os
+            if not os.path.isfile(csvFilePath):
+                df.to_csv(csvFilePath, mode='a', index=False, sep=sep, date_format=date_format, encoding=encoding)
+            elif len(df.columns) != len(pd.read_csv(csvFilePath, nrows=1, sep=sep).columns):
+                raise Exception(
+                    "Columns do not match!! Dataframe has " + str(len(df.columns)) + " columns. CSV file has " + str(
+                        len(pd.read_csv(csvFilePath, nrows=1, sep=sep).columns)) + " columns.")
+            elif not (df.columns == pd.read_csv(csvFilePath, nrows=1, sep=sep).columns).all():
+                raise Exception("Columns and column order of dataframe and csv file do not match!!")
+            else:
+                df.to_csv(csvFilePath, mode='a', index=False, sep=sep, header=False, date_format=date_format, encoding=encoding)
+
 
         #print(pointscolumn)
 
@@ -424,6 +482,9 @@ class CycleTimeQueries(QueryManager):
                 # Apply function to each cell and only make it visible if issue was in state on or after the filter date
                 df_filtered = df.applymap(lambda x: 0 if hide_greater_than_date(x, filterdate) else 1)
 
+                if stacked:
+                    df_filtered=keeprightmoststate(df_filtered)
+
                 if pointscolumn:
                     # Function to create column of sizes at a given point in time
                     # Needs mydate and size_data
@@ -460,6 +521,13 @@ class CycleTimeQueries(QueryManager):
                     right = df_size_on_day
                     result = left.join(right, on=['key'])  # http://pandas.pydata.org/pandas-docs/stable/merging.html\
                     df_countable = pd.concat([result, df_filtered], axis=1)
+                    # for debuging and analytics append the days state to file
+                    df_countable['date'] = filterdate.isoformat()
+                    if stacked:
+                        file_name = "daily-cfd-stacked-run-at"+ timenowstr + ".csv"
+                    else:
+                        file_name = "daily-cfd-run-at" + timenowstr + ".csv"
+                    appendDFToCSV(df_countable, file_name )
                 else:
                     df_countable = df_filtered
 
@@ -478,7 +546,7 @@ class CycleTimeQueries(QueryManager):
 
                 # For debugging write dataframe to sheet for current day.
                 #file_name="countable-cfd-for-day-"+ filterdate.isoformat()+timenowstr+".csv"
-                #df_countable.to_csv(file_name, sep='\t', lineterminator='\n', encoding='utf-8', quoting=csv.QUOTE_ALL)
+                #df_countable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
 
                 df_slice = df_countable.loc[:,slice_columns].copy()
                 df_sub_sum = cumulativeColumnStates(df_slice,stacked)
