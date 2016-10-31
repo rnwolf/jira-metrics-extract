@@ -544,6 +544,11 @@ and so on).
 Changelog
 ---------
 
+0.13 - 31 Oct 2016
+     * Deal with differences in dealing with unicode jira issue summaries betwee Python 2 and 3
+     * Return pipe delimited values for issue fields such as labels and Components
+     * Save day by day file changes to make it easier to see backlog story size change with pivot table analysis
+
 0.12 - 27 Oct 2016
      * Created new package jira-metrics-extract based on https://github.com/optilude/jira-cycle-extract
      * CFD can also be produced based on issue Story Points size
