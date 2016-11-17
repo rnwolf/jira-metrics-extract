@@ -297,7 +297,12 @@ def burnup_forecast(
     if title is not None:
         ax.set_title(title)
     
-    ax.set_xlabel("Date")
+    #ax.set_xlabel("Date")
+    # rotate the x axis labels
+    ax.set_xticklabels(ax.xaxis.get_majorticklabels(), rotation=30)
+    ax.xaxis.set_tick_params(width=2)
+    ax.xaxis.set_tick_params(size=2)
+
     if sized: # Empty strings are False
         ax.set_ylabel("Points")
     else:

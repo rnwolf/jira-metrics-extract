@@ -227,10 +227,10 @@ def main():
             if state == 'backlog':
                 backlog_column = key
     else:
-        backlog_column = args.backlog_column or cfd_data.columns[0]
-        committed_column = args.committed_column or cfd_data.columns[1]
-        final_column = args.final_column or cfd_data.columns[-2]
-        done_column = args.done_column or cfd_data.columns[-1]
+        backlog_column = args.backlog_column or cfd_data.columns[0].replace('Sized', '')
+        committed_column = args.committed_column or cfd_data.columns[1].replace('Sized', '')
+        final_column = args.final_column or cfd_data.columns[-2].replace('Sized', '')
+        done_column = args.done_column or cfd_data.columns[-1].replace('Sized', '')
 
     cycle_names = [s['name'] for s in q.settings['cycle']]
     field_names = sorted(options['settings']['fields'].keys())
