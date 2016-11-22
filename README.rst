@@ -543,6 +543,8 @@ and so on).
 
 Changelog
 ---------
+0.15 - 22 Nov 2016
+     * Changed the creation of temp buffer creation from in memory spooled to buffered disk for MS-Windows users.
 
 0.13 - 31 Oct 2016
      * Deal with differences in dealing with unicode jira issue summaries betwee Python 2 and 3

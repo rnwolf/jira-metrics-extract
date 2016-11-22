@@ -279,10 +279,10 @@ def burnup_forecast(
         raise UnchartableData("Cannot draw burnup forecast chart with no completed items")
 
     if backlog_column is None:
-        backlog_column = cfd_data.columns[0]
+        backlog_column = cfd_data.columns[0].replace('Sized', '')
 
     if done_column is None:
-        done_column = cfd_data.columns[-1]
+        done_column = cfd_data.columns[-1].replace('Sized', '')
 
     if target is None:
         target = cfd_data[backlog_column+sized].max()
