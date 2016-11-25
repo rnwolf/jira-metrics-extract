@@ -543,6 +543,10 @@ and so on).
 
 Changelog
 ---------
+0.16 - 25 Nov 2016
+     * Fixed bug that ignored issues that were created with a storypoint size that has never changed. Impacted CFD and forecaste
+     * Export of issue links and parent epics to csv file - Useful for identifying issue dependencies.
+
 0.15 - 22 Nov 2016
      * Changed the creation of temp buffer creation from in memory spooled to buffered disk for MS-Windows users.
 

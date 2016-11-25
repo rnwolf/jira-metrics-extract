@@ -135,6 +135,11 @@ class CycleTimeQueries(QueryManager):
         else:
             buffer = tempfile.SpooledTemporaryFile(max_size=20000, mode='w+t')
 
+        issuelinks = open("issuelinks.csv", "w+", 1)
+        #df_edges = pd.DataFrame()
+        #df_edges = pd.DataFrame(columns=['Source', 'OutwardLink', 'Target', 'Inwardlink','LinkType'])
+        #df_edges.to_csv(issuelinks, columns=['Source', 'OutwardLink', 'Target', 'Inwardlink','LinkType'], header=True, index=None, sep='\t',encoding='utf-8')
+
         df_size_history = pd.DataFrame( columns=['key','fromDate','toDate','size'])
         df_size_history.to_csv(buffer, columns=['key', 'fromDate', 'toDate', 'size'], header=True, index=None, sep='\t',encoding='utf-8')
 
@@ -185,7 +190,39 @@ class CycleTimeQueries(QueryManager):
                 for cycle_name in cycle_names:
                     item[cycle_name] = None
 
-                # Get Story Points size changes history
+                # Get the relationships for this issue
+                edges = []  # Source, Target, Inward Link, Outward Link, Type
+                issuelinks = issue.fields.issuelinks
+                issueEpic = issue.fields.customfield_10008 if issue.fields.customfield_10008 else None  # Epic Link
+                if issueEpic is not None:
+                    data = {'Source':issueEpic, 'Target':issue.key, 'InwardLink':'Belongs to Epic', 'OutwardLink':'Issue in Epic', 'LinkType':'EpicIssue'}
+                    edges.append(data)
+
+                for link in issuelinks:
+                    inwardissue = None
+                    outwardissue = None
+                    try:
+                        inwardissue = link.inwardIssue.key
+                    except:
+                        outwardissue = link.outwardIssue.key
+
+                    if inwardissue is not None:
+                        data = {'Source':inwardissue, 'Target':issue.key, 'InwardLink':link.type.inward, 'OutwardLink': link.type.outward, 'LinkType':link.type.name}
+                    else:
+                        data = {'Source':issue.key, 'Target': outwardissue, 'InwardLink':link.type.inward, 'OutwardLink':link.type.outward, 'LinkType':link.type.name}
+                    edges.append(data)
+
+                if len(edges)>0:
+                    try:
+                        df_edges
+                    except NameError:
+                        #print('Not found')
+                        df_edges = pd.DataFrame(edges)
+                    else:
+                        df_links = pd.DataFrame(edges)
+                        df_edges=df_edges.append(df_links)  # = pd.DataFrame(edges)
+                # Got all the relationships for this iisue
+
                 rows = []
                 for snapshot in self.iter_size_changes(issue):
                     data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
@@ -198,6 +235,14 @@ class CycleTimeQueries(QueryManager):
                 # Round Down datetimes to full dates
                 df['fromDate'] = df['fromDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
                 df['toDate'] = df['toDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
+                # If we only have one row of size changes and current issue has a size then it must have been created with a size value at creation.
+                # This size will not be recorded in the size_change record.
+                # Hence update the single row we have with the current issue size.
+                # Get Story Points size changes history
+                #If condition is met update the size cell
+                if (item['StoryPoints'] is not None ) and (len(df)==1):
+                    df.loc[df.index[0], 'size'] = item['StoryPoints']
+
                 # Append to csv file
                 df.to_csv(buffer, columns=['key', 'fromDate', 'toDate', 'size'], header=None,
                            mode='a', sep='\t', date_format='%Y-%m-%d',encoding='utf-8')
@@ -266,6 +311,9 @@ class CycleTimeQueries(QueryManager):
         buffer.seek(0)
         result_size = result_size.from_csv(buffer, sep='\t')
         buffer.close()
+
+        df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
+        df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
         result_size.set_index('key')
         result_size['toDate'] = pd.to_datetime(result_size['toDate'], format=('%Y-%m-%d'))
         result_size['fromDate'] = pd.to_datetime(result_size['fromDate'], format=('%Y-%m-%d'))
@@ -520,6 +568,9 @@ class CycleTimeQueries(QueryManager):
                     #     return key_size_value
 
                     #df_size_on_day = cycle_data['key'].apply(lambda row: lookup_size(row))
+                    # For debug
+                    #if filterdate.isoformat() == '2016-11-22':
+                    #    size_history.loc[filterdate.isoformat()].to_csv("debug-size-history.csv")
                     storypoints_series_on = size_history.loc[filterdate.isoformat()].T
                     df_size_on_day = pd.Series.to_frame(storypoints_series_on)
                     df_size_on_day.columns = [pointscolumn]
