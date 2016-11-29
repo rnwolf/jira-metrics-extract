@@ -20,6 +20,12 @@ from .config import config_to_options
 from .cycletime import CycleTimeQueries
 from . import charting
 
+# dateparser module uses the load stream function in a way that is not save. But as this is an dependent module we will ignore warning at present.
+import warnings
+from ruamel.yaml.error import UnsafeLoaderWarning
+warnings.simplefilter('ignore', UnsafeLoaderWarning)
+
+
 def eprint(*args, **kwargs):
     """Print to stderr
     """
@@ -241,31 +247,32 @@ def main():
     trials = args.charts_burnup_forecast_trials or 1000
 
     # TODO - parameterise historical throughput
-    #try:
-    if args.points:
-        burnup_forecast_data = q.burnup_forecast(
-            cfd_data,
-            daily_throughput_data,
-            trials=trials,
-            target=target,
-            backlog_column=backlog_column,
-            done_column=done_column,
-            percentiles=quantiles,
-            sized='Sized')
-    else:
-        burnup_forecast_data = q.burnup_forecast(
-            cfd_data,
-            daily_throughput_data,
-            trials=trials,
-            target=target,
-            backlog_column=backlog_column,
-            done_column=done_column,
-            percentiles=quantiles,
-            sized='')
+    # TODO - Only run the burnup forecasting if requested by commandline.
+    try:
+        if args.points:
+            burnup_forecast_data = q.burnup_forecast(
+                cfd_data,
+                daily_throughput_data,
+                trials=trials,
+                target=target,
+                backlog_column=backlog_column,
+                done_column=done_column,
+                percentiles=quantiles,
+                sized='Sized')
+        else:
+            burnup_forecast_data = q.burnup_forecast(
+                cfd_data,
+                daily_throughput_data,
+                trials=trials,
+                target=target,
+                backlog_column=backlog_column,
+                done_column=done_column,
+                percentiles=quantiles,
+                sized='')
 
-    #except Exception as e:
-    #    print("Warning: Failed to calculate burnup forecast")
-    #    burnup_forecast_data = None
+    except Exception as e:
+        print("Warning: Failed to calculate burnup forecast")
+        burnup_forecast_data = None
 
     # Write files
 

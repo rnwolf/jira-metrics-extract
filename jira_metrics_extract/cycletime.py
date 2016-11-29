@@ -752,10 +752,16 @@ class CycleTimeQueries(QueryManager):
         percentiles=[0.5, 0.75, 0.85, 0.95],
         sized = ''
     ):
-        if len(cfd_data.index) == 0:
-            raise Exception("Cannot calculate burnup forecast with no data")
-        if len(throughput_data.index) == 0:
-            raise Exception("Cannot calculate burnup forecast with no completed items")
+        try:
+            if len(cfd_data.index) == 0:
+                raise Exception("Cannot calculate burnup forecast with no data")
+
+            if len(throughput_data.index) == 0:
+                raise Exception("Cannot calculate burnup forecast with no completed items")
+
+        except AttributeError:
+            # Method does not exist.  What now?
+            raise Exception("Cannot calculate burnup forecast with data or no completed items")
 
         # Debug - what are the column names
         #print("backlog_column --> {}  done_column --> {}".format(backlog_column, done_column))

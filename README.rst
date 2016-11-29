@@ -543,6 +543,11 @@ and so on).
 
 Changelog
 ---------
+
+0.17 - 29 Nov 2016
+     * Don't try to create a forecast chart if no issues have been completed.
+     * See specifying warning as suggested by ruamel.yaml module works. 
+
 0.16 - 25 Nov 2016
      * Fixed bug that ignored issues that were created with a storypoint size that has never changed. Impacted CFD and forecaste
      * Export of issue links and parent epics to csv file - Useful for identifying issue dependencies.
