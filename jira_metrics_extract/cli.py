@@ -247,7 +247,6 @@ def main():
     trials = args.charts_burnup_forecast_trials or 1000
 
     # TODO - parameterise historical throughput
-    # TODO - Only run the burnup forecasting if requested by commandline.
     try:
         if args.points:
             burnup_forecast_data = q.burnup_forecast(
@@ -271,7 +270,7 @@ def main():
                 sized='')
 
     except Exception as e:
-        print("Warning: Failed to calculate burnup forecast")
+        print("Warning: Failed to calculate burnup forecast data")
         burnup_forecast_data = None
 
     # Write files

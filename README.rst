@@ -543,6 +543,8 @@ and so on).
 
 Changelog
 ---------
+0.18 - 04 Dec 2016
+     * Commentout line that created zero length issuelinks.csv file in cycletime.py.
 
 0.17 - 29 Nov 2016
      * Don't try to create a forecast chart if no issues have been completed.

@@ -135,7 +135,7 @@ class CycleTimeQueries(QueryManager):
         else:
             buffer = tempfile.SpooledTemporaryFile(max_size=20000, mode='w+t')
 
-        issuelinks = open("issuelinks.csv", "w+", 1)
+        #issuelinks = open("issuelinks.csv", "w+", 1)
         #df_edges = pd.DataFrame()
         #df_edges = pd.DataFrame(columns=['Source', 'OutwardLink', 'Target', 'Inwardlink','LinkType'])
         #df_edges.to_csv(issuelinks, columns=['Source', 'OutwardLink', 'Target', 'Inwardlink','LinkType'], header=True, index=None, sep='\t',encoding='utf-8')
@@ -312,8 +312,14 @@ class CycleTimeQueries(QueryManager):
         result_size = result_size.from_csv(buffer, sep='\t')
         buffer.close()
 
+        try:
+            df_edges
+        except NameError:
+            # print('Not found')
+            df_edges = pd.DataFrame()
         df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
         df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
+
         result_size.set_index('key')
         result_size['toDate'] = pd.to_datetime(result_size['toDate'], format=('%Y-%m-%d'))
         result_size['fromDate'] = pd.to_datetime(result_size['fromDate'], format=('%Y-%m-%d'))
