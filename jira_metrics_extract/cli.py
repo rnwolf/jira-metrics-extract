@@ -48,6 +48,7 @@ def create_argument_parser():
     parser.add_argument('--burnup-forecast', metavar='burnup_forecast.csv', help='Calculate forecasted dates percentiles and write to file.')
     parser.add_argument('--size-history', metavar='size_history.csv',
                         help='Get Story Points history and write to file.')
+    parser.add_argument('--links', metavar='links_data.tsv', help='Write issue links and epic relationships to file.')
 
     parser.add_argument('--quantiles', metavar='0.3,0.5,0.75,0.85,0.95', help="Quantiles to use when calculating percentiles")
     parser.add_argument('--backlog-column', metavar='<name>', help="Name of the backlog column. Defaults to the first column.")
@@ -184,7 +185,8 @@ def main():
         print("Fetching issues (this could take some time)")
         cycle_data = pd.DataFrame()
         size_data = pd.DataFrame()
-        cycle_data, size_data =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data)
+        edges_data = pd.DataFrame()
+        cycle_data, size_data, edges_data  =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data, result_edges=edges_data )
         if args.points:
             print("Working out size changes of issues over time")
             df_size_history = q.size_history(size_data)
@@ -195,6 +197,8 @@ def main():
         eprint(e)
         return 1
 
+    if args.links:
+        edges_data.to_csv(args.links, sep='\t', index=False,encoding='utf-8')
 
     #cfd_data = q.cfd(cycle_data)
     cfd_data = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=False)

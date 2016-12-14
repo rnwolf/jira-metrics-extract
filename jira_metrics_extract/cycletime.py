@@ -82,7 +82,7 @@ class CycleTimeQueries(QueryManager):
 
         super(CycleTimeQueries, self).__init__(jira, **settings)
 
-    def cycle_data(self, verbose=False, result_cycle=None, result_size=None):
+    def cycle_data(self, verbose=False, result_cycle=None, result_size=None, result_edges=None):
         """Get data from JIRA for cycle/flow times and story points size change.
 
         Build a numerically indexed data frame with the following 'fixed'
@@ -318,13 +318,14 @@ class CycleTimeQueries(QueryManager):
             # print('Not found')
             df_edges = pd.DataFrame()
         df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
-        df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
+        #df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
+        result_edges=df_edges
 
         result_size.set_index('key')
         result_size['toDate'] = pd.to_datetime(result_size['toDate'], format=('%Y-%m-%d'))
         result_size['fromDate'] = pd.to_datetime(result_size['fromDate'], format=('%Y-%m-%d'))
 
-        return result_cycle, result_size
+        return result_cycle, result_size, result_edges
 
     def size_history(self,size_data):
         """Return the a DataFrame,
@@ -548,32 +549,7 @@ class CycleTimeQueries(QueryManager):
                     df_filtered=keeprightmoststate(df_filtered)
 
                 if pointscolumn:
-                    # Function to create column of sizes at a given point in time
-                    # Needs mydate and size_data
-                    # def lookup_size(x):
-                    #     # needs datevar and df_size_history
-                    #     size_data_for_key = size_data[size_data['key']==x]
-                    #
-                    #     try:
-                    #         df_filtered = size_data_for_key[size_data_for_key.apply(
-                    #             lambda row: datetime.date(row.fromDate.year, row.fromDate.month,
-                    #                                   row.fromDate.day) <= filterdate <= datetime.date(row.toDate.year,
-                    #                                                                                    row.toDate.month,
-                    #                                                                                    row.toDate.day),
-                    #             axis=1)]
-                    #     except:
-                    #         df_filtered = None
-                    #
-                    #     #df_filtered = size_data[
-                    #     #    size_data.apply(lambda row: datetime.date(row.fromDate.year, row.fromDate.month, row.fromDate.day) <= filterdate <= datetime.date(row.toDate.year, row.toDate.month, row.toDate.day), axis=1)]
-                    #     if len(df_filtered):
-                    #         key_size_value = df_filtered.iloc[-1]['size']
-                    #     else:
-                    #         key_size_value = None
-                    #     #print(key_size_value)
-                    #     return key_size_value
 
-                    #df_size_on_day = cycle_data['key'].apply(lambda row: lookup_size(row))
                     # For debug
                     #if filterdate.isoformat() == '2016-11-22':
                     #    size_history.loc[filterdate.isoformat()].to_csv("debug-size-history.csv")
@@ -601,13 +577,7 @@ class CycleTimeQueries(QueryManager):
                 if pointscolumn:
                     for size_state in self.settings['sized_statuses']: #states_to_size:
                         sizedStateName = size_state + 'Sized'
-                        df_countable[sizedStateName] = df_countable.apply(
-                            lambda row: (row[pointscolumn] * row[size_state] if row[pointscolumn] > 0 else (1.0 * row[size_state])), axis=1)
-
-                # Slice out the columns we want for CFD
-                # df_slice= df_countable.loc[:,('Open','Analysis','PrioritizedSized','In ProcessSized','DoneSized')]
-                #print(slice_columns)
-                #df_slice = df_countable.loc[:, ('Open', 'AnalysisSized', 'CommittedSized', 'DevelopSized', 'DoneSized')]
+                        df_countable[sizedStateName] = df_countable.apply( lambda row: (row[pointscolumn] * row[size_state] ), axis=1)
 
                 # For debugging write dataframe to sheet for current day.
                 #file_name="countable-cfd-for-day-"+ filterdate.isoformat()+timenowstr+".csv"

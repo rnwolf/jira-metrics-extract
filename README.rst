@@ -543,6 +543,10 @@ and so on).
 
 Changelog
 ---------
+0.19 - 14 Dec 2016
+     * When creating cfd and burnup charts, zero sized issues were sized as 1 point. Now counted as zero points to avoid confusion between direct Jira download.
+     * Fixed bug where forecast target line was caculated as the maximum rather than the latest value in backlog cumulative history.
+
 0.18 - 04 Dec 2016
      * Commentout line that created zero length issuelinks.csv file in cycletime.py.
 

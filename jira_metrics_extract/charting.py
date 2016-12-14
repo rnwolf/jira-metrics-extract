@@ -285,7 +285,11 @@ def burnup_forecast(
         done_column = cfd_data.columns[-1].replace('Sized', '')
 
     if target is None:
-        target = cfd_data[backlog_column+sized].max()
+        #target = cfd_data[backlog_column+sized].max()
+        target = cfd_data[backlog_column+sized].iloc[-1] # the latest value
+    #Debug plot target
+    #cfd_data.to_csv('cfd_data_in_forecast_plot.tsv',sep='\t',encoding='utf-8')
+    # end debug
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -312,6 +316,9 @@ def burnup_forecast(
     transform_horizontal = matplotlib.transforms.blended_transform_factory(ax.transAxes, ax.transData)
 
     plot_data = cfd_data[[backlog_column+sized, done_column+sized]]
+    # Debug plotting
+    #plot_data.to_csv('plot_data_forecast_debug.tsv',sep='\t',encoding='utf-8')
+    # end debug
     plot_data.plot.line(ax=ax, legend=False)
     
     mc_trials = CycleTimeQueries.burnup_monte_carlo(
@@ -345,7 +352,7 @@ def burnup_forecast(
         for percentile, value in finish_date_percentiles.iteritems():
 
             ax.vlines(value, bottom, target, linestyles='--', linewidths=0.5)
-            ax.annotate("%.0f%% (%s)" % ((percentile * 100), value.strftime("%d/%m/%Y"),),
+            ax.annotate("%.0f%% (%s)" % ((percentile * 100), value.strftime("%d/%b/%Y"),),
                 xy=(to_days_since_epoch(value), 0.35),
                 xycoords=transform_vertical,
                 rotation="vertical",
@@ -362,7 +369,7 @@ def burnup_forecast(
         deadline_dse = to_days_since_epoch(deadline)
 
         ax.vlines(deadline, bottom, target, color='r', linestyles='-', linewidths=0.5)
-        ax.annotate("Due: %s" % (deadline.strftime("%d/%m/%Y"),),
+        ax.annotate("Due: %s" % (deadline.strftime("%d/%b/%Y"),),
             xy=(deadline, target),
             xytext=(0.95, 0.95),
             textcoords='axes fraction',
@@ -388,9 +395,9 @@ def burnup_forecast(
             
             ax.text(0.02, 0.5,
                 "Deadline: %s\nForecast (%.0f%%): %s\nSlack: %d days" % (
-                    deadline.strftime("%d/%m/%Y"),
+                    deadline.strftime("%d/%b/%Y"),
                     (deadline_confidence * 100),
-                    deadline_confidence_date.strftime("%d/%m/%Y"),
+                    deadline_confidence_date.strftime("%d/%b/%Y"),
                     deadline_delta
                 ),
                 transform=ax.transAxes,
