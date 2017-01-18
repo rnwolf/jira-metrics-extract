@@ -156,7 +156,7 @@ def main():
 
     if args.quantiles:
         try:
-            quantiles = [float(s.strip()) for s in quantiles_raw.split(',')]
+            quantiles = [float(s.strip()) for s in args.quantiles.split(',')]
             options['settings']['quantiles'] = quantiles
         except (AttributeError, ValueError,):
             print("Invalid value for --quantiles: " + args.quantiles)

@@ -1,5 +1,5 @@
 JIRA Metrics Data extract utility
-===============================
+=================================
 
 This utility helps extract data from JIRA for processing with the
 ActionableAgile™ Analytics tool (https://www.actionableagile.com/analytics-tools/),
@@ -543,6 +543,10 @@ and so on).
 
 Changelog
 ---------
+
+0.20 - 18 Jan 2017
+     * Fixed bug that caused an error when the --quantiles commandline was used.
+
 0.19 - 14 Dec 2016
      * When creating cfd and burnup charts, zero sized issues were sized as 1 point. Now counted as zero points to avoid confusion between direct Jira download.
      * Fixed bug where forecast target line was caculated as the maximum rather than the latest value in backlog cumulative history.
