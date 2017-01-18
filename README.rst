@@ -543,6 +543,8 @@ and so on).
 
 Changelog
 ---------
+0.21 - 18 Jan 2017
+     * Updated setup.py to pin dateparser<=0.5.0 as later version uses a downsteam library ephem that does not work on Windows.
 
 0.20 - 18 Jan 2017
      * Fixed bug that caused an error when the --quantiles commandline was used.
