@@ -481,7 +481,7 @@ def main():
             deadline = parse_relative_date(args.charts_burnup_forecast_deadline) if args.charts_burnup_forecast_deadline else None
             deadline_confidence = args.charts_burnup_forecast_deadline_confidence
 
-            print("Drawing burnup foreacst chart in", args.charts_burnup_forecast)
+            print("Drawing burnup forecast chart in", args.charts_burnup_forecast)
             charting.set_style('whitegrid')
             try:
                 if args.points:

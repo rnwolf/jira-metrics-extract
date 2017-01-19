@@ -543,6 +543,9 @@ and so on).
 
 Changelog
 ---------
+0.22 - 19 Jan 2017
+     * Fix spelling mistake changed foreacst to forecast in cli.py.
+
 0.21 - 18 Jan 2017
      * Updated setup.py to pin dateparser<=0.5.0 as later version uses a downsteam library ephem that does not work on Windows.
 
