@@ -98,14 +98,14 @@ def create_argument_parser():
     return parser
 
 def get_jira_client(connection):
-    url = connection['Domain']
+    url = connection['domain']
 
     token = connection['token']
     if token:
         username, password = base64.b64decode(token).decode('utf-8').split(':')
     else:
-        username = connection['Username']
-        password = connection['Password']
+        username = connection['username']
+        password = connection['password']
 
     print("Connecting to ", url)
 

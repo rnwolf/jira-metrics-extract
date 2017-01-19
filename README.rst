@@ -543,6 +543,10 @@ and so on).
 
 Changelog
 ---------
+
+0.23 - 19 Jan 2017
+     * Fix capitalization of domain, username and password in config options so that using environment vars for connection settings work.
+
 0.22 - 19 Jan 2017
      * Fix spelling mistake changed foreacst to forecast in cli.py.
 
