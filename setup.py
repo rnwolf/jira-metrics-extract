@@ -10,13 +10,13 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='jira-metrics-extract',
-    version='0.23',
+    version='0.24',
     description='Extract agile metrics data from JIRA',
     long_description=long_description,
     author='Rudiger Wolf',
     author_email='rudiger.wolf@throughputfocus.com',
     url='https://github.com/rnwolf/jira-metrics-extract',
-    download_url = 'https://github.com/rnwolf/jira-metrics-extract/tarball/0.23',
+    download_url = 'https://github.com/rnwolf/jira-metrics-extract/tarball/0.24',
     license='MIT',
     keywords='agile metrics jira analytics kanban cfd',
     classifiers=[
@@ -39,7 +39,7 @@ setup(
         'pandas>=0.18',
         'numpy',
         'python-dateutil',
-        'dateparser<=0.5.0',
+        'dateparser==0.5.0',
         'pydicti',
         'openpyxl',
         'future',
@@ -47,7 +47,7 @@ setup(
     ],
 
     extras_require={
-        'charting': ['seaborn', 'matplotlib', 'statsmodels'],
+        'charting': ['seaborn', 'matplotlib==1.5.3', 'statsmodels'],
     },
 
     entry_points={

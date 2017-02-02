@@ -110,10 +110,17 @@ def get_jira_client(connection):
     print("Connecting to ", url)
 
     if not username:
-        username = raw_input("Username: ")
+        # Fix Python 2.x. raw_input replaced by input in Python 3.x 
+        try:
+            username = raw_input("Enter Username: ")
+        except NameError:
+            username = input("Enter username: ")
+        except:
+            username = getpass.getuser() #Get OS username as as fallback 
+            print('No username provided, using username: ' + username)
 
     if not password:
-        password = getpass.getpass("Password: ")
+        password = getpass.getpass("Enter Password: ")
 
     return JIRA({'server': url}, basic_auth=(username, password))
 

@@ -544,6 +544,9 @@ and so on).
 Changelog
 ---------
 
+0.24 - 2 Feb 2017
+     * Replace raw_input which is not python 3 compatible with getpass.getuser input.
+
 0.23 - 19 Jan 2017
      * Fix capitalization of domain, username and password in config options so that using environment vars for connection settings work.
 
