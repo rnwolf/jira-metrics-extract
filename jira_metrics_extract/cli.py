@@ -122,7 +122,11 @@ def get_jira_client(connection):
     if not password:
         password = getpass.getpass("Enter Password: ")
 
-    return JIRA({'server': url}, basic_auth=(username, password))
+    if (len(username + password) > 1):
+        jiraconnection = JIRA(options={'server': url}, basic_auth=(username, password))
+    else:
+        jiraconnection = JIRA(options={'server': url})
+    return jiraconnection
 
 def to_json_string(value):
     if isinstance(value, pd.Timestamp):

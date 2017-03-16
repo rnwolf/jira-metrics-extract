@@ -39,7 +39,7 @@ setup(
         'pandas>=0.18',
         'numpy',
         'python-dateutil',
-        'dateparser==0.5.0',
+        'dateparser==0.6.0',
         'pydicti',
         'openpyxl',
         'future',
