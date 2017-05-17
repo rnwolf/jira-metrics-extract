@@ -88,7 +88,10 @@ class QueryManager(object):
                 raise Exception("JIRA field with name `%s` does not exist (did you try to use the field id instead?)" % field)
 
     def resolve_field_value(self, issue, name, field_name):
-        field_value = getattr(issue.fields, field_name)
+        try:
+            field_value = getattr(issue.fields, field_name)
+        except AttributeError:
+            field_value = None
 
         if field_value is None:
             return None

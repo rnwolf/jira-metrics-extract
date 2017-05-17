@@ -193,10 +193,14 @@ class CycleTimeQueries(QueryManager):
                 # Get the relationships for this issue
                 edges = []  # Source, Target, Inward Link, Outward Link, Type
                 issuelinks = issue.fields.issuelinks
-                issueEpic = issue.fields.customfield_10008 if issue.fields.customfield_10008 else None  # Epic Link
-                if issueEpic is not None:
-                    data = {'Source':issueEpic, 'Target':issue.key, 'InwardLink':'Belongs to Epic', 'OutwardLink':'Issue in Epic', 'LinkType':'EpicIssue'}
-                    edges.append(data)
+
+                # It is seems that having an Epic Parent does not record an Epic Link, just the name "Epic Name"
+                # Creating Epic relationship requires more work. Also each Jira instance will have different customfields for Epic data
+                # Remove this code.
+                #issueEpic = issue.fields.customfield_10008 if issue.fields.customfield_10008 else None  # Epic Link
+                #if issueEpic is not None:
+                #    data = {'Source':issueEpic, 'Target':issue.key, 'InwardLink':'Belongs to Epic', 'OutwardLink':'Issue in Epic', 'LinkType':'EpicIssue'}
+                #    edges.append(data)
 
                 for link in issuelinks:
                     inwardissue = None
@@ -249,7 +253,7 @@ class CycleTimeQueries(QueryManager):
                 #print(rows)
 
                 # Record date of status changes
-                for snapshot in self.iter_changes(issue, False):
+                for snapshot in self.iter_changes(issue, True):
                     snapshot_cycle_step = self.settings['cycle_lookup'].get(snapshot.status.lower(), None)
                     if snapshot_cycle_step is None:
                         if verbose:
@@ -317,8 +321,12 @@ class CycleTimeQueries(QueryManager):
         except NameError:
             # print('Not found')
             df_edges = pd.DataFrame()
-        df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
-        #df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
+        try:
+            df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
+            #df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
+        except KeyError:
+            print('We had a key error in pandas. No issue edges found.')
+
         result_edges=df_edges
 
         result_size.set_index('key')
