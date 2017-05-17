@@ -544,7 +544,7 @@ and so on).
 Changelog
 ---------
 
-0.25 - 17 May 2017
+0.26 - 17 May 2017
      * Update to better deal with related issues. Better error handling with links and stop looking up parent Epics as some issue types do not have Epic parents, and Epics use custom fields in each Jira instance.
 
 0.24 - 2 Feb 2017
