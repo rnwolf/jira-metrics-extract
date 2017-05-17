@@ -544,6 +544,9 @@ and so on).
 Changelog
 ---------
 
+0.27 - 17 May 2017
+     * Forgot to update setup.py version number for release. Update and re-publish.
+
 0.26 - 17 May 2017
      * Update to better deal with related issues. Better error handling with links and stop looking up parent Epics as some issue types do not have Epic parents, and Epics use custom fields in each Jira instance.
 
