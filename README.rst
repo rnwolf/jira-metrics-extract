@@ -543,6 +543,8 @@ and so on).
 
 Changelog
 ---------
+0.28 - 19 May 2017
+     * Write out two files with CFD data. One that can be plotted as stacked.
 
 0.27 - 17 May 2017
      * Forgot to update setup.py version number for release. Update and re-publish.

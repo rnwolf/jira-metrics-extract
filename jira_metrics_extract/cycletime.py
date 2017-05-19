@@ -717,7 +717,8 @@ class CycleTimeQueries(QueryManager):
 
             while current_value < target_value:
                 current_date += frequency
-                current_value += get_sample()
+                sample_data = get_sample()
+                current_value += sample_data
 
                 dates.append(current_date)
                 steps.append(current_value)
