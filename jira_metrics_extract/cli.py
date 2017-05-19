@@ -5,6 +5,7 @@ import json
 import datetime
 import base64
 import sys
+import csv
 from future.utils import iteritems
 
 import dateutil.parser
@@ -216,15 +217,15 @@ def main():
     cfd_data_stackable = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=True)
 
     #Write to disk which is great for debugging and for printing via other external methods
-    output_filename = options['settings']['output']
-    if df_cfd_data_stackable.size > 1:
+    output_filename =args.output
+    if cfd_data_stackable.size > 1:
         file_name = "cfd_data_stackable_" + output_filename
         # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-        df_cfd_data_stackable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
-    if df_cfd_data.size > 1:
+        cfd_data_stackable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
+    if cfd_data.size > 1:
         file_name = "cfd_data_" + output_filename
         # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-        df_cfd_data.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
+        cfd_data.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
 
     scatter_data = q.scatterplot(cycle_data)
     histogram_data = q.histogram(cycle_data)

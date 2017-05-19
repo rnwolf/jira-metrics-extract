@@ -544,6 +544,9 @@ and so on).
 Changelog
 ---------
 0.28 - 19 May 2017
+     * Filename of CFD file not correct. Fixed.
+
+0.28 - 19 May 2017
      * Write out two files with CFD data. One that can be plotted as stacked.
 
 0.27 - 17 May 2017
