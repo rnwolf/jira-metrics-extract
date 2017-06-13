@@ -83,9 +83,10 @@ Write a YAML configuration file like so, calling it e.g. `config.yaml`::
 
         # How to connect to JIRA?
         Connection:
-            Domain: https://myserver.atlassian.net/
-            Username: myusername # If missing or and not in an environment var, you will be prompted at runtime
-            Password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+            domain: https://myserver.atlassian.net/
+            username: myusername # If missing or and not in an environment var, you will be prompted at runtime
+            password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+            verify: False # If missing True is assumed.
 
         #Criteria:
         #    Project:
@@ -543,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.30 - 13 June 2017
+     * Server SSL certificate incorrectly configured. Added verify flag as an option in connection section of configuration yaml file. If verify is False 
+    
 0.28 - 19 May 2017
      * Filename of CFD file not correct. Fixed.
 

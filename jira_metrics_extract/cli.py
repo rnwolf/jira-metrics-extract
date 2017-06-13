@@ -100,8 +100,12 @@ def create_argument_parser():
 
 def get_jira_client(connection):
     url = connection['domain']
-
     token = connection['token']
+    try:
+        verify = connection['verify']
+    except KeyError: #Not found in yaml configuration file
+        verify = True # Default should be to verify the certificates to Jira server
+
     if token:
         username, password = base64.b64decode(token).decode('utf-8').split(':')
     else:
@@ -124,9 +128,9 @@ def get_jira_client(connection):
         password = getpass.getpass("Enter Password: ")
 
     if (len(username + password) > 1):
-        jiraconnection = JIRA(options={'server': url}, basic_auth=(username, password))
+        jiraconnection = JIRA(options={'server': url,'verify': verify}, basic_auth=(username, password))
     else:
-        jiraconnection = JIRA(options={'server': url})
+        jiraconnection = JIRA(options={'server': url,'verify': verify})
     return jiraconnection
 
 def to_json_string(value):
