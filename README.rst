@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.33 - 24 June 2017
+     * Modify CLI file so that some argparse parameters are tested for with hasattr function.
+
 0.32 - 24 June 2017
      * Modify CLI file so argparse optional commandline options default to None
 

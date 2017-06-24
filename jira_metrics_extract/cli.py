@@ -180,11 +180,10 @@ def main():
             return
     quantiles = options['settings']['quantiles']
 
-    if args.charts_from is not None:
+    if hasattr(args, 'charts_from'):
         options['settings']['charts_from'] = args.charts_from
-    if args.charts_to is not None:
+    if hasattr(args,'charts_to'):
         options['settings']['charts_to'] = args.charts_to
-
 
     output_format = args.format.lower() if args.format is not None else 'csv'
 
