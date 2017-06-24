@@ -544,6 +544,15 @@ and so on).
 
 Changelog
 ---------
+0.36 - 24 June 2017
+     * Modify CLI hasattr function incorrectly formatted. Fixed in a number of places.
+
+0.35 - 24 June 2017
+     * Modify CLI so that some additional argparse parameters used for filenames are cleaned of spaces and newlines with strip().
+
+0.34 - 24 June 2017
+     * Modify CLI so that some argparse parameters used for filenames are cleaned of spaces and newlines with strip().
+
 0.33 - 24 June 2017
      * Modify CLI file so that some argparse parameters are tested for with hasattr function.
 

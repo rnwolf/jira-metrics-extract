@@ -136,8 +136,8 @@ def get_jira_client(connection):
 def to_json_string(value):
     if isinstance(value, pd.Timestamp):
         return value.strftime("%Y-%m-%d")
-    if isinstance(value, unicode):
-        return value.encode('utf-8')
+    #if isinstance(value, unicode): # Remove as all strings in python 3 are now unicode
+    #    return value.encode('utf-8')
     if value in (None, np.NaN, pd.NaT):
         return ""
 
@@ -220,7 +220,7 @@ def main():
     cfd_data_stackable = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=True)
 
     #Write to disk which is great for debugging and for printing via other external methods
-    output_filename =args.output
+    output_filename = args.output.strip()
     if cfd_data_stackable.size > 1:
         file_name = "cfd_data_stackable_" + output_filename
         # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
@@ -238,7 +238,7 @@ def main():
     #    cycle_data[cycle_data['completed_timestamp'] >= (throughput_window_end - datetime.timedelta(days=throughput_window_days))],
     #)
 
-    if args.points:
+    if hasattr(args,'points'):
         daily_throughput_data = q.throughput_data(
             cycle_data[
                 cycle_data['completed_timestamp'] >= (
@@ -273,12 +273,18 @@ def main():
     query_attribute_names = [q.settings['query_attribute']] if q.settings['query_attribute'] else []
 
     # Burnup forecast
-    target = args.charts_burnup_forecast_target or None
-    trials = args.charts_burnup_forecast_trials or 1000
+    if hasattr(args, 'charts_burnup_forecast_target'):
+        target = args.charts_burnup_forecast_target
+    else:
+        target = None
+    if hasattr(args, 'charts_burnup_forecast_trials'):
+        trials = args.charts_burnup_forecast_trials
+    else:
+        trials = 1000
 
     # TODO - parameterise historical throughput
     try:
-        if args.points:
+        if hasattr(args,'points'):
             burnup_forecast_data = q.burnup_forecast(
                 cfd_data,
                 daily_throughput_data,
@@ -305,48 +311,52 @@ def main():
 
     # Write files
 
-    if args.output:
-        print("Writing cycle data to", args.output)
+    if hasattr(args,'output'):
+        output_filename = args.output.strip()
+        print("Writing cycle data to", output_filename)
 
         header = ['ID', 'Link', 'Name'] + cycle_names + ['Type', 'Status', 'Resolution'] + field_names + query_attribute_names
         columns = ['key', 'url', 'summary'] + cycle_names + ['issue_type', 'status', 'resolution'] + field_names + query_attribute_names
 
         if output_format == 'json':
             values = [header] + [map(to_json_string, row) for row in cycle_data[columns].values.tolist()]
-            with open(args.output, 'w') as out:
+            with open(output_filename, 'w') as out:
                 out.write(json.dumps(values))
         elif output_format == 'xlsx':
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
-            cycle_data.to_csv(args.output, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t')
+            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t')
 
-    if args.records:
+    if hasattr(args,'records'):
         if output_format == 'json':
+            output_filename = args.records.strip()
             print("Writing cycle data as JSON records")
-            cycle_data.to_json(args.records, date_format='iso', orient='records')
+            cycle_data.to_json(output_filename, date_format='iso', orient='records')
         else:
             print("Warning: Ignoring cycle data as JSON records. Use --format json")
 
 
-    if args.size_history:
-        print("Writing issue size history data to", args.size_history)
+    if hasattr(args,'size_history'):
+        output_filename = args.args.size_history.strip()
+        print("Writing issue size history data to", output_filename)
         if output_format == 'json':
-            size_data.to_json(args.size_history, date_format='iso')
+            size_data.to_json(output_filename, date_format='iso')
         elif output_format == 'xlsx':
-            size_data.to_excel(args.size_history, 'SIZES')
+            size_data.to_excel(output_filename, 'SIZES')
         else:
-            size_data.to_csv(args.size_history, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d')
+            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d')
 
-    if args.cfd:
-        print("Writing Cumulative Flow Diagram data to", args.cfd)
+    if hasattr(args,'cfd'):
+        output_filename = args.cfd.strip()
+        print("Writing Cumulative Flow Diagram data to", output_filename)
         if output_format == 'json':
-            cfd_data.to_json(args.cfd, date_format='iso')
+            cfd_data.to_json(output_filename, date_format='iso')
         elif output_format == 'xlsx':
-            cfd_data.to_excel(args.cfd, 'CFD')
+            cfd_data.to_excel(output_filename, 'CFD')
         else:
-            cfd_data.to_csv(args.cfd, sep='\t')
+            cfd_data.to_csv(output_filename, sep='\t')
 
-    if args.scatterplot:
+    if hasattr(args,'scatterplot'):
         print("Writing cycle time scatter plot data to", args.scatterplot)
         if output_format == 'json':
             scatter_data.to_json(args.scatterplot, date_format='iso')
@@ -355,7 +365,7 @@ def main():
         else:
             scatter_data.to_csv(args.scatterplot, index=False, sep='\t')
 
-    if args.percentiles:
+    if hasattr(args,'percentiles'):
         print("Writing cycle time percentiles", args.percentiles)
         if output_format == 'json':
             percentile_data.to_json(args.percentiles, date_format='iso')
@@ -364,7 +374,7 @@ def main():
         else:
             percentile_data.to_csv(args.percentiles, header=True, sep='\t')
 
-    if args.histogram:
+    if hasattr(args,'histogram'):
         print("Writing cycle time histogram data to", args.histogram)
         if output_format == 'json':
             histogram_data.to_json(args.histogram, date_format='iso')
@@ -373,7 +383,7 @@ def main():
         else:
             histogram_data.to_csv(args.histogram, header=True, sep='\t')
 
-    if args.throughput:
+    if hasattr(args,'throughput'):
         print("Writing throughput data to", args.throughput)
         if output_format == 'json':
             daily_throughput_data.to_json(args.throughput, date_format='iso')
@@ -382,7 +392,7 @@ def main():
         else:
             daily_throughput_data.to_csv(args.throughput, header=True, sep='\t')
 
-    if args.burnup_forecast and burnup_forecast_data is not None:
+    if hasattr(args,'burnup_forecast') and burnup_forecast_data is not None:
         print("Writing burnup forecast data to", args.burnup_forecast)
         if output_format == 'json':
             burnup_forecast_data.to_json(args.burnup_forecast, date_format='iso')
