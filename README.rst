@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.32 - 24 June 2017
+     * Modify CLI file so argparse optional commandline options default to None
+
 0.31 - 24 June 2017
      * Modify CLI file so that logic copes with missing  optional commandline options
 
