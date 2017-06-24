@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.37 - 24 June 2017
+     * Modify CLI hasattr syntax errors.
+
 0.36 - 24 June 2017
      * Modify CLI hasattr function incorrectly formatted. Fixed in a number of places.
 
