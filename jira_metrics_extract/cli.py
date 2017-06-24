@@ -167,10 +167,10 @@ def main():
 
     # Override settings with command line options
 
-    if args.max_results:
+    if args.max_results is not None:
         options['settings']['max_results'] = args.max_results
 
-    if args.quantiles:
+    if args.quantiles is not None:
         try:
             quantiles = [float(s.strip()) for s in args.quantiles.split(',')]
             options['settings']['quantiles'] = quantiles
@@ -180,13 +180,13 @@ def main():
             return
     quantiles = options['settings']['quantiles']
 
-    if args.charts_from:
+    if args.charts_from is not None:
         options['settings']['charts_from'] = args.charts_from
-    if args.charts_to:
+    if args.charts_to is not None:
         options['settings']['charts_to'] = args.charts_to
 
 
-    output_format = args.format.lower() if args.format else 'csv'
+    output_format = args.format.lower() if args.format is not None else 'csv'
 
     throughput_window_end = parse_relative_date(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
     throughput_window_days = args.throughput_window

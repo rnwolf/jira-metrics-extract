@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.31 - 24 June 2017
+     * Modify CLI file so that logic copes with missing  optional commandline options
+
 0.30 - 13 June 2017
      * Server SSL certificate incorrectly configured. Added verify flag as an option in connection section of configuration yaml file. If verify is False 
     
