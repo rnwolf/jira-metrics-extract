@@ -3,6 +3,7 @@ import itertools
 import datetime
 import dateutil.parser
 import dateutil.tz
+from jira import JIRA, JIRAError
 
 def to_datetime(date):
     """Turn a date into a datetime at midnight.
@@ -248,13 +249,17 @@ class QueryManager(object):
         fromRow=0
         issues = []
         while True:
-            pageofissues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'],startAt=fromRow)
-            fromRow = fromRow + int(self.settings['max_results'])
-            issues += pageofissues
-            if verbose:
-                print("Got %s results per jira query from result starting at line number %s " % (self.settings['max_results'],  fromRow))
-            if len(pageofissues)==0:
-                break
+            try:
+                pageofissues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'],startAt=fromRow)
+                fromRow = fromRow + int(self.settings['max_results'])
+                issues += pageofissues
+                if verbose:
+                    print("Got %s results per jira query from result starting at line number %s " % (self.settings['max_results'],  fromRow))
+                if len(pageofissues)==0:
+                    break
+            except JIRAError as e:
+                print("Jira query error with: {}\n{}".format(queryString, e))
+                return []
 
 
         if verbose:

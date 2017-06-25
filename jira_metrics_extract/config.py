@@ -43,7 +43,7 @@ def config_to_options(data):
             'statusmapping':[],
             'cycle': [],
 
-            'max_results': 1000,
+            'max_results': 500,
             'quantiles': [0.3, 0.5, 0.75, 0.85, 0.95],
             'charts_from': None,
             'charts_to': None
