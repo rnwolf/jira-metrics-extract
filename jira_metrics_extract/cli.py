@@ -57,7 +57,7 @@ def create_argument_parser():
     parser.add_argument('--final-column', metavar='<name>', help="Name of the final 'work' column. Defaults to the penultimate column.")
     parser.add_argument('--done-column', metavar='<name>', help="Name of the 'done' column. Defaults to the last column.")
     parser.add_argument('--throughput-window', metavar='60', type=int, default=60, help="How many days in the past to use for calculating throughput")
-    parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window."e)
+    parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window.")
 
     if charting.HAVE_CHARTING:
 
