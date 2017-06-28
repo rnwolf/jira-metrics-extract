@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.42 - 28 June 2017
+     * Export burnup_forecast dataframe only with column headers and not the numbered index column.
+
 0.41 - 28 June 2017
      * Convert burnup_forecast series into a dataframe with column headings so that can be saved to file with column headers
 

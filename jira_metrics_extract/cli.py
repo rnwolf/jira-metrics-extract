@@ -404,7 +404,7 @@ def main():
         elif output_format == 'xlsx':
             burnup_forecast_data.to_excel(output_filename, 'Forecast', header=True)
         else:
-            burnup_forecast_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8')
+            burnup_forecast_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8', index=False)
 
 
     # Output charts (if we have the right things installed)
