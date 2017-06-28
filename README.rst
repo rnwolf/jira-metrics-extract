@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.40 - 28 June 2017
+     * Update pandas to_csv function calls that did not specify encoding='utf-8'. Problems opening files on Windows 7.
+
 0.38 - 25 June 2017
      * Modify CLI hasattr syntax errors. Replace some with getattr(args,'xxxx',None).
 

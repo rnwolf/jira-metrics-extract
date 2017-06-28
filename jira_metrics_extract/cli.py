@@ -205,7 +205,7 @@ def main():
         if args.points:
             print("Working out size changes of issues over time")
             df_size_history = q.size_history(size_data)
-            df_size_history.to_csv(r'size_history.csv', sep='\t')  # Save to file.
+            df_size_history.to_csv(r'size_history.csv', sep='\t', encoding='utf-8')  # Save to file.
         else:
             df_size_history = None
     except JIRAError as e:
@@ -325,7 +325,7 @@ def main():
         elif output_format == 'xlsx':
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
-            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t')
+            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t', encoding='utf-8')
 
     if args.records:
         if output_format == 'json':
@@ -344,7 +344,7 @@ def main():
         elif output_format == 'xlsx':
             size_data.to_excel(output_filename, 'SIZES')
         else:
-            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d')
+            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d', encoding='utf-8')
 
     if getattr(args,'cfd',None) is not None:
         output_filename = args.cfd.strip()
@@ -354,7 +354,7 @@ def main():
         elif output_format == 'xlsx':
             cfd_data.to_excel(output_filename, 'CFD')
         else:
-            cfd_data.to_csv(output_filename, sep='\t')
+            cfd_data.to_csv(output_filename, sep='\t', encoding='utf-8')
 
     if getattr(args,'scatterplot',None) is not None:
         output_filename = args.scatterplot.strip()
@@ -364,7 +364,7 @@ def main():
         elif output_format == 'xlsx':
             scatter_data.to_excel(output_filename, 'Scatter', index=False)
         else:
-            scatter_data.to_csv(output_filename, index=False, sep='\t')
+            scatter_data.to_csv(output_filename, index=False, sep='\t', encoding='utf-8')
 
     if getattr(args,'percentiles',None) is not None:
         output_filename = args.percentiles.strip()
@@ -374,7 +374,7 @@ def main():
         elif output_format == 'xlsx':
             percentile_data.to_frame(name='percentiles').to_excel(output_filename, 'Percentiles', header=True)
         else:
-            percentile_data.to_csv(output_filename, header=True, sep='\t')
+            percentile_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8')
 
     if getattr(args,'histogram',None) is not None:
         output_filename = args.histogram.strip()
@@ -384,7 +384,7 @@ def main():
         elif output_format == 'xlsx':
             histogram_data.to_frame(name='histogram').to_excel(args.histogram, 'Histogram', header=True)
         else:
-            histogram_data.to_csv(args.histogram, header=True, sep='\t')
+            histogram_data.to_csv(args.histogram, header=True, sep='\t', encoding='utf-8')
 
     if getattr(args,'throughput',None) is not None:
         output_filename = args.throughput.strip()
@@ -394,7 +394,7 @@ def main():
         elif output_format == 'xlsx':
             daily_throughput_data.to_excel(args.throughput, 'Throughput', header=True)
         else:
-            daily_throughput_data.to_csv(args.throughput, header=True, sep='\t')
+            daily_throughput_data.to_csv(args.throughput, header=True, sep='\t', encoding='utf-8')
 
     if (getattr(args,'burnup_forecast',None) is not None ) and (burnup_forecast_data is not None):
         output_filename = args.burnup_forecast.strip()
@@ -404,7 +404,7 @@ def main():
         elif output_format == 'xlsx':
             burnup_forecast_data.to_excel(output_filename, 'Forecast', header=True)
         else:
-            burnup_forecast_data.to_csv(output_filename, header=True, sep='\t')
+            burnup_forecast_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8')
 
 
     # Output charts (if we have the right things installed)
