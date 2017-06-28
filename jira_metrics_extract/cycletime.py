@@ -781,5 +781,8 @@ class CycleTimeQueries(QueryManager):
             # percentiles at finish line
             finish_dates = mc_trials.apply(pd.Series.last_valid_index)
             finish_date_percentiles = finish_dates.quantile(percentiles).dt.normalize()
-
-        return finish_date_percentiles
+            #Convert burnup_forecast series into a dataframe with column headings so that can be saved to file with column headers
+            result = pd.DataFrame({'Percentile': finish_date_percentiles.index, 'Date': finish_date_percentiles.values})
+        else:
+            result = pd.DataFrame(columns=['Date','Percentile'])
+        return result

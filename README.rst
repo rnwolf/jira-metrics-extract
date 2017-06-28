@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.41 - 28 June 2017
+     * Convert burnup_forecast series into a dataframe with column headings so that can be saved to file with column headers
+
 0.40 - 28 June 2017
      * Update pandas to_csv function calls that did not specify encoding='utf-8'. Problems opening files on Windows 7.
 
