@@ -37,7 +37,10 @@ def create_argument_parser():
     parser.add_argument('config', metavar='config.yml', help='Configuration file')
     parser.add_argument('output', metavar='data.csv', nargs='?', help='Output file. Contains all issues described by the configuration file, metadata, and dates of entry to each state in the cycle.')
     parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
-    parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues',default=1000)
+    parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues',default=500)
+    parser.add_argument('--changelog', dest='changelog', action='store_true',help='Get issue history changelog. Default for all queries.')
+    parser.add_argument('--no-changelog', dest='changelog', action='store_false',help='DO NOT Get issue history changelog. Limit response size.')
+    parser.set_defaults(changelog=True)
     parser.add_argument('--format', metavar='csv|json|xlsx', help="Output format for data (default CSV)")
     parser.add_argument('--points', metavar="StoryPoints", help="By default we use story count, now use given column and use Story Points size for analytics")
     parser.add_argument('--records', metavar='records.json', help="All the ouptut data for issues as JSON records instead of arrays.")
@@ -201,7 +204,7 @@ def main():
         cycle_data = pd.DataFrame()
         size_data = pd.DataFrame()
         edges_data = pd.DataFrame()
-        cycle_data, size_data, edges_data  =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data, result_edges=edges_data )
+        cycle_data, size_data, edges_data  =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data, result_edges=edges_data, changelog=args.changelog)
         if args.points:
             print("Working out size changes of issues over time")
             df_size_history = q.size_history(size_data)
@@ -263,10 +266,17 @@ def main():
             if state == 'backlog':
                 backlog_column = key
     else:
-        backlog_column = args.backlog_column or cfd_data.columns[0].replace('Sized', '')
-        committed_column = args.committed_column or cfd_data.columns[1].replace('Sized', '')
-        final_column = args.final_column or cfd_data.columns[-2].replace('Sized', '')
-        done_column = args.done_column or cfd_data.columns[-1].replace('Sized', '')
+        try:
+
+            backlog_column = args.backlog_column or cfd_data.columns[0].replace('Sized', '')
+            committed_column = args.committed_column or cfd_data.columns[1].replace('Sized', '')
+            final_column = args.final_column or cfd_data.columns[-2].replace('Sized', '')
+            done_column = args.done_column or cfd_data.columns[-1].replace('Sized', '')
+        except IndexError:
+            backlog_column = args.backlog_column
+            committed_column = args.committed_column
+            final_column = args.final_column
+            done_column = args.done_column
 
     cycle_names = [s['name'] for s in q.settings['cycle']]
     field_names = sorted(options['settings']['fields'].keys())

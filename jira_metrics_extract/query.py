@@ -64,7 +64,7 @@ class QueryManager(object):
         query_attribute=None,
         fields={},
         known_values={},
-        max_results=1000,
+        max_results=500,
     )
 
     fields = {}  # resolved at runtime to JIRA fields
@@ -125,10 +125,11 @@ class QueryManager(object):
         """
 
         # Find the first size change, if any
-        size_changes = list(filter(
-            lambda h: h.field == 'Story Points',
-            itertools.chain.from_iterable([c.items for c in issue.changelog.histories])
-        ))
+        try:
+            size_changes = list(filter(lambda h: h.field == 'Story Points',
+                                       itertools.chain.from_iterable([c.items for c in issue.changelog.histories])))
+        except AttributeError:
+            return
         size = (size_changes[0].fromString) if len(size_changes) > 0 else None
 
         # Issue was created
@@ -166,10 +167,12 @@ class QueryManager(object):
         is_resolved = False
 
         # Find the first status change, if any
-        status_changes = list(filter(
-            lambda h: h.field == 'status',
-            itertools.chain.from_iterable([c.items for c in issue.changelog.histories])
-        ))
+        try:
+            status_changes = list(filter(
+                lambda h: h.field == 'status',
+                itertools.chain.from_iterable([c.items for c in issue.changelog.histories])))
+        except AttributeError:
+            return
         last_status = status_changes[0].fromString if len(status_changes) > 0 else issue.fields.status.name
         last_resolution = None
 
@@ -215,7 +218,7 @@ class QueryManager(object):
 
     # Basic queries
 
-    def find_issues(self, criteria={}, jql=None, order='KEY ASC', verbose=False):
+    def find_issues(self, criteria={}, jql=None, order='KEY ASC', verbose=False, changelog=True):
         """Return a list of issues with changelog metadata.
 
         Searches for the `issue_types`, `project`, `valid_resolutions` and
@@ -250,7 +253,11 @@ class QueryManager(object):
         issues = []
         while True:
             try:
-                pageofissues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'],startAt=fromRow)
+                if changelog:
+                    pageofissues = self.jira.search_issues(queryString, expand='changelog', maxResults=self.settings['max_results'],startAt=fromRow)
+                else:
+                    pageofissues = self.jira.search_issues(queryString, maxResults=self.settings['max_results'],startAt=fromRow)
+
                 fromRow = fromRow + int(self.settings['max_results'])
                 issues += pageofissues
                 if verbose:

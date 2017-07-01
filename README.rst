@@ -544,6 +544,11 @@ and so on).
 
 Changelog
 ---------
+0.43 - 1 July 2017
+     * Added --no-changelog commandline flag so that Jira expand changelog is removed. Returns issues with no history.
+     * Quicker and smalled API response playloads. Is not possible interate over change history.
+     * Was having problems getting results when dealing with BIG issues with a lot of history.
+
 0.42 - 28 June 2017
      * Export burnup_forecast dataframe only with column headers and not the numbered index column.
 

@@ -82,7 +82,7 @@ class CycleTimeQueries(QueryManager):
 
         super(CycleTimeQueries, self).__init__(jira, **settings)
 
-    def cycle_data(self, verbose=False, result_cycle=None, result_size=None, result_edges=None):
+    def cycle_data(self, verbose=False, result_cycle=None, result_size=None, result_edges=None,changelog=True):
         """Get data from JIRA for cycle/flow times and story points size change.
 
         Build a numerically indexed data frame with the following 'fixed'
@@ -133,7 +133,7 @@ class CycleTimeQueries(QueryManager):
             # buffering value is 1
             # Windows users seem to have a problem with spooled file
         else:
-            buffer = tempfile.SpooledTemporaryFile(max_size=20000, mode='w+t')
+            buffer = tempfile.SpooledTemporaryFile(max_size=50000, mode='w+t')
 
         #issuelinks = open("issuelinks.csv", "w+", 1)
         #df_edges = pd.DataFrame()
@@ -153,7 +153,7 @@ class CycleTimeQueries(QueryManager):
             series[self.settings['query_attribute']] = {'data': [], 'dtype': str}
 
         for criteria in self.settings['queries']:
-            for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose):
+            for issue in self.find_issues(criteria, order='updatedDate DESC', verbose=verbose, changelog=changelog):
 
                 # Deal with the differences in strings between Python 2 & 3
                 if (sys.version_info > (3, 0)):
@@ -228,14 +228,18 @@ class CycleTimeQueries(QueryManager):
                 # Got all the relationships for this iisue
 
                 rows = []
-                for snapshot in self.iter_size_changes(issue):
-                    data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
-                    rows.append(data)
-                df = pd.DataFrame(rows)
-                # Create the toDate column
-                df_toDate=df['fromDate'].shift(-1)
-                df_toDate.loc[len(df_toDate)-1] = datetime.datetime.now(pytz.utc)
-                df['toDate'] = df_toDate
+                try:
+                    for snapshot in self.iter_size_changes(issue):
+                        data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
+                        rows.append(data)
+                    df = pd.DataFrame(rows)
+                    # Create the toDate column
+                    df_toDate=df['fromDate'].shift(-1)
+                    df_toDate.loc[len(df_toDate)-1] = datetime.datetime.now(pytz.utc)
+                    df['toDate'] = df_toDate
+                except:
+                    df = pd.DataFrame(columns = ['key', 'fromDate', 'toDate', 'size'])
+
                 # Round Down datetimes to full dates
                 df['fromDate'] = df['fromDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
                 df['toDate'] = df['toDate'].apply(lambda dt: datetime.datetime(dt.year, dt.month, dt.day))
@@ -244,7 +248,8 @@ class CycleTimeQueries(QueryManager):
                 # Hence update the single row we have with the current issue size.
                 # Get Story Points size changes history
                 #If condition is met update the size cell
-                if (item['StoryPoints'] is not None ) and (len(df)==1):
+                if getattr(item, 'StoryPoints', None) is not None and (len(df)==1):
+                #if (item['StoryPoints'] is not None ) and (len(df)==1):
                     df.loc[df.index[0], 'size'] = item['StoryPoints']
 
                 # Append to csv file
@@ -329,7 +334,12 @@ class CycleTimeQueries(QueryManager):
 
         result_edges=df_edges
 
-        result_size.set_index('key')
+        # There maybe no result_size data is we might not have any change history
+        try:
+            result_size.set_index('key')
+        except KeyError:
+            result_size = pd.DataFrame(index= ['key'],columns = ['fromDate', 'toDate', 'size'])
+
         result_size['toDate'] = pd.to_datetime(result_size['toDate'], format=('%Y-%m-%d'))
         result_size['fromDate'] = pd.to_datetime(result_size['fromDate'], format=('%Y-%m-%d'))
 
@@ -608,7 +618,10 @@ class CycleTimeQueries(QueryManager):
 
         # Reindex to make sure we have all dates
         start, end = df.index.min(), df.index.max()
-        df = df.reindex(pd.date_range(start, end, freq='D'), method='ffill')
+        try: # If we have no change history we will not have any data in the df and will get a ValueError on reindex
+            df = df.reindex(pd.date_range(start, end, freq='D'), method='ffill')
+        except ValueError:
+            pass
 
         return df
 
