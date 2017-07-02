@@ -544,6 +544,9 @@ and so on).
 
 Changelog
 ---------
+0.43 - 2 July 2017
+     * Removed debug print statements left over for adding --no-changelog.
+
 0.43 - 1 July 2017
      * Added --no-changelog commandline flag so that Jira expand changelog is removed. Returns issues with no history.
      * Quicker and smalled API response playloads. Is not possible interate over change history.

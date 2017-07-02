@@ -205,7 +205,8 @@ def main():
         size_data = pd.DataFrame()
         edges_data = pd.DataFrame()
         cycle_data, size_data, edges_data  =  q.cycle_data(verbose=args.verbose,result_cycle=cycle_data, result_size=size_data, result_edges=edges_data, changelog=args.changelog)
-        if args.points:
+
+        if args.points and args.changelog:
             print("Working out size changes of issues over time")
             df_size_history = q.size_history(size_data)
             df_size_history.to_csv(r'size_history.csv', sep='\t', encoding='utf-8')  # Save to file.
