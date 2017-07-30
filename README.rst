@@ -544,6 +544,11 @@ and so on).
 
 Changelog
 ---------
+0.45 - 30 July 2017
+     * Added the start of testing. 
+     * Use issue Created date in first issue cycle 'Open' if skipped.
+     * Added cli parameter to set jira username and password to blank strings. Useful for testing.
+
 0.43 - 2 July 2017
      * Removed debug print statements left over for adding --no-changelog.
 

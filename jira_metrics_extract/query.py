@@ -3,6 +3,7 @@ import itertools
 import datetime
 import dateutil.parser
 import dateutil.tz
+import re
 from jira import JIRA, JIRAError
 
 def to_datetime(date):
@@ -111,12 +112,20 @@ class QueryManager(object):
                         value = next(itertools.ifilter(lambda v: v in values, self.settings['known_values'][name]))
                     except StopIteration:
                         value = None
-
-        if not isinstance(value, (int, float, bool, basestring)):
-            try:
-                value = str(value)
-            except TypeError:
-                pass
+        else:
+            if not isinstance(value, (int, float, bool, basestring)):
+                try:
+                    value = str(value)
+                except TypeError:
+                    pass
+            if isinstance(value, (basestring)):
+                regex = re.compile(r'^\d{4}[- ]?\d\d[- ]?\d\d[T ]\d\d:\d\d:\d\d[.+]\d{2,6}[+-:]\d{2,6}$')
+                #regex = re.compile(r'^\d{4}[- ]?\d\d[- ]?\d\d[T ]\d\d:\d\d:\d\d\.\d{3,6}[+-]\d{3,6}$')
+                if regex.match(value):
+                    #print('Got date formatted string! Converting to datetime!')
+                    value = dateutil.parser.parse(value)
+                    # Remove the timezone element as excel does not handle
+                    value = value.replace(tzinfo=None)
 
         return value
 
@@ -261,7 +270,7 @@ class QueryManager(object):
                 fromRow = fromRow + int(self.settings['max_results'])
                 issues += pageofissues
                 if verbose:
-                    print("Got %s results per jira query from result starting at line number %s " % (self.settings['max_results'],  fromRow))
+                    print("Got %s lines per jira query from result starting at line number %s " % (self.settings['max_results'],  fromRow))
                 if len(pageofissues)==0:
                     break
             except JIRAError as e:

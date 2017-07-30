@@ -2,6 +2,7 @@ from .query import QueryManager
 import pandas as pd
 import numpy as np
 import os
+import dateutil.parser
 import datetime
 import csv
 import pytz
@@ -124,7 +125,8 @@ class CycleTimeQueries(QueryManager):
             'status': {'data': [], 'dtype': str},
             'resolution': {'data': [], 'dtype': str},
             'cycle_time': {'data': [], 'dtype': 'timedelta64[ns]'},
-            'completed_timestamp': {'data': [], 'dtype': 'datetime64[ns]'}
+            'completed_timestamp': {'data': [], 'dtype': 'datetime64[ns]'},
+            'created_timestamp': {'data': [], 'dtype': 'datetime64[ns]'}
         }
 
         if sys.platform.startswith('win'):
@@ -166,7 +168,8 @@ class CycleTimeQueries(QueryManager):
                         'status': issue.fields.status.name,
                         'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
                         'cycle_time': None,
-                        'completed_timestamp': None
+                        'completed_timestamp': None,
+                        'created_timestamp':  issue.fields.created[:19]
                     }
                 else:
                     # Python 2 code in this block
@@ -178,7 +181,8 @@ class CycleTimeQueries(QueryManager):
                         'status': issue.fields.status.name,
                         'resolution': issue.fields.resolution.name if issue.fields.resolution else None,
                         'cycle_time': None,
-                        'completed_timestamp': None
+                        'completed_timestamp': None,
+                        'created_timestamp': issue.fields.created[:19]
                     }
 
                 for name, field_name in self.fields.items():
@@ -248,7 +252,7 @@ class CycleTimeQueries(QueryManager):
                 # Hence update the single row we have with the current issue size.
                 # Get Story Points size changes history
                 #If condition is met update the size cell
-                if getattr(item, 'StoryPoints', None) is not None and (len(df)==1):
+                if getattr(item, 'StoryPoints', None) is not None and (df.shape[0]==1):
                 #if (item['StoryPoints'] is not None ) and (len(df)==1):
                     df.loc[df.index[0], 'size'] = item['StoryPoints']
 
@@ -256,6 +260,12 @@ class CycleTimeQueries(QueryManager):
                 df.to_csv(buffer, columns=['key', 'fromDate', 'toDate', 'size'], header=None,
                            mode='a', sep='\t', date_format='%Y-%m-%d',encoding='utf-8')
                 #print(rows)
+
+                # If the first column in item lifecycle was scipted put the created data in it.
+                if item[cycle_names[0]] is None:
+                    item[cycle_names[0]] = dateutil.parser.parse(item['created_timestamp']) #item['created_timestamp']
+                    # Figure out why the first Column does not have created date
+                    #print(dateutil.parser.parse(item['created_timestamp']))
 
                 # Record date of status changes
                 for snapshot in self.iter_changes(issue, True):
@@ -330,7 +340,7 @@ class CycleTimeQueries(QueryManager):
             df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
             #df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
         except KeyError:
-            print('We had a key error in pandas. No issue edges found.')
+            print('Info: No issue edges found.')
 
         result_edges=df_edges
 

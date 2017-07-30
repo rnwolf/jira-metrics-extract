@@ -1,20 +1,22 @@
 # How to connect to JIRA?
 Connection:
-    Domain: https://jira.atlassian.com
-    #Username: myusername # If missing or and not in an environment var, you will be prompted at runtime
-    #Password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+    domain: https://jira.atlassian.com
+    #username: myusername # If missing or and not in an environment var, you will be prompted at runtime
+    #password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+    #verify: False
 
 Criteria:
     Project:
-        - CLOUD # JIRA project key. Can query across multiple projects, add additional rows.
+        - CRA # JIRA project key. Can query across multiple projects, add additional rows.
+        - CLOV
     Issue types: # Which issue types to include? - Delivery Story - Task - Bug
-        - Improvement
-        - Feature
+        - Story
     #Valid resolutions: # Which resolution statuses to include (unresolved is always included)
     #    - SIGNED OFF
     #    - DONE
-    #JQL:  fixVersion = "ATCM Release 1.0" and priority = Must  AND status != Withdrawn
-#    # Additional filter as raw JQL, optional  eg labels != "Spike"
+    JQL: (createdDate > 2013-01-01 and createdDate <= 2016-01-01) and "Story Points" is not  Empty and status  in (Closed,Done)
+    #RESOLUTION IN (Fixed,Done,Duplicate,Fixed,"Handled by Support","Won't Do",Answered) AND (createdDate > 2016-07-31 and createdDate <= 2017-07-29)
+#    # Additional filter as raw JQL, optional  eg labels != "Spike" and Status changed after startOfDay("-24M")
 
 #Criteria:
 #     Project:
@@ -60,17 +62,28 @@ Workflow:
     Open:
       - OPEN
       - OPEN - UNTRIAGED
+      - Open - untriaged
       - Not Started
       - Parked
+      - New
+      - On Hold
     Analysis:
+      - Needs Verification
       - ACCEPTED
       - CANDIDATE FOR SPRINT
       - REFINE
       - Research
+      - Needs Triage
+      - Under Review
+      - Verified
+      - Define
     Committed:
       - READY FOR SPRINT
       - Prioritised
+      - To Do
+      - Ready for Development
     Develop:
+      - Develop
       - In Progress
       - Reopened
       - BUILD
@@ -88,6 +101,14 @@ Workflow:
       - Story Development
       - Doing
       - RESOLVED - PENDING DEPLOY
+      - Resolved - pending deploy
+      - Waiting on Contegix
+      - Technical Review
+      - To be reviewed
+      - Awaiting Merge
+      - Awaiting Quality Review
+      - Quality Review
+      - Implemented
     Done:
       - Deployed
       - DONE
@@ -111,6 +132,7 @@ Attributes:
     Release: Fix version/s
     StoryPoints: Story Points
     Labels: labels
+    Created: created
 
 #Known values:
 #    Release:
@@ -119,6 +141,7 @@ Attributes:
 # Additional parameters that can be overridden by command line options
 Max Results: 100
 Quantiles:
+    - 0.3
     - 0.5
     - 0.85
     - 0.95

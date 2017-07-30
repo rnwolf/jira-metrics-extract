@@ -6,6 +6,7 @@ import datetime
 import base64
 import sys
 import csv
+import os
 from future.utils import iteritems
 
 import dateutil.parser
@@ -38,6 +39,7 @@ def create_argument_parser():
     parser.add_argument('output', metavar='data.csv', nargs='?', help='Output file. Contains all issues described by the configuration file, metadata, and dates of entry to each state in the cycle.')
     parser.add_argument('-v', dest='verbose', action='store_true', help='Verbose output')
     parser.add_argument('-n', metavar='N', dest='max_results', type=int, help='Only fetch N most recently updated issues',default=500)
+    parser.add_argument('-b', dest='blankcredentials', action='store_true',help='Flag to set username and password to empty strings.')
     parser.add_argument('--changelog', dest='changelog', action='store_true',help='Get issue history changelog. Default for all queries.')
     parser.add_argument('--no-changelog', dest='changelog', action='store_false',help='DO NOT Get issue history changelog. Limit response size.')
     parser.set_defaults(changelog=True)
@@ -117,7 +119,7 @@ def get_jira_client(connection):
 
     print("Connecting to ", url)
 
-    if not username:
+    if username is None:
         # Fix Python 2.x. raw_input replaced by input in Python 3.x 
         try:
             username = raw_input("Enter Username: ")
@@ -127,7 +129,7 @@ def get_jira_client(connection):
             username = getpass.getuser() #Get OS username as as fallback 
             print('No username provided, using username: ' + username)
 
-    if not password:
+    if password is None:
         password = getpass.getpass("Enter Password: ")
 
     if (len(username + password) > 1):
@@ -155,9 +157,10 @@ def parse_relative_date(str):
     except ValueError:
         return relative_parser(str)
 
-def main():
+def main(argv=None):
     parser = create_argument_parser()
-    args = parser.parse_args()
+    # if None passed, uses sys.argv[1:], else use custom args
+    args = parser.parse_args(argv)
 
     if not args.config:
         args.print_usage()
@@ -193,6 +196,10 @@ def main():
     throughput_window_end = parse_relative_date(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
     throughput_window_days = args.throughput_window
 
+    if args.blankcredentials:
+        options['connection']['username']=''
+        options['connection']['password']=''
+
     # Query JIRA
 
     try:
@@ -220,19 +227,9 @@ def main():
         edges_data.to_csv(args.links, sep='\t', index=False,encoding='utf-8')
 
     #cfd_data = q.cfd(cycle_data)
+    print("Working out CFD data")
     cfd_data = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=False)
     cfd_data_stackable = q.cfd(cycle_data, size_history = df_size_history, pointscolumn=args.points, stacked=True)
-
-    #Write to disk which is great for debugging and for printing via other external methods
-    output_filename = args.output.strip()
-    if cfd_data_stackable.size > 1:
-        file_name = "cfd_data_stackable_" + output_filename
-        # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-        cfd_data_stackable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
-    if cfd_data.size > 1:
-        file_name = "cfd_data_" + output_filename
-        # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-        cfd_data.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_ALL)
 
     scatter_data = q.scatterplot(cycle_data)
     histogram_data = q.histogram(cycle_data)
@@ -326,8 +323,8 @@ def main():
         output_filename = args.output.strip()
         print("Writing cycle data to", output_filename)
 
-        header = ['ID', 'Link', 'Name'] + cycle_names + ['Type', 'Status', 'Resolution'] + field_names + query_attribute_names
-        columns = ['key', 'url', 'summary'] + cycle_names + ['issue_type', 'status', 'resolution'] + field_names + query_attribute_names
+        header = ['ID', 'Link', 'Name'] + cycle_names + ['Type', 'Status', 'Resolution','CycleTime'] + field_names + query_attribute_names
+        columns = ['key', 'url', 'summary'] + cycle_names + ['issue_type', 'status', 'resolution','cycle_time'] + field_names + query_attribute_names
 
         if output_format == 'json':
             values = [header] + [map(to_json_string, row) for row in cycle_data[columns].values.tolist()]
@@ -366,6 +363,19 @@ def main():
             cfd_data.to_excel(output_filename, 'CFD')
         else:
             cfd_data.to_csv(output_filename, sep='\t', encoding='utf-8')
+
+        # Write to disk which is great for debugging and for printing via other external methods
+        base_filename=os.path.splitext(os.path.basename(output_filename))[0]
+        if cfd_data_stackable.size > 1:
+            file_name = "stacked_" + base_filename + '.tsv'
+            print("Writing stacked Cumulative Flow Diagram data to ", file_name)
+            # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
+            cfd_data_stackable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_NONE)
+        if cfd_data.size > 1:
+            file_name = "unstacked_" + base_filename+ '.tsv'
+            print("Writing unstacked Cumulative Flow Diagram data to ", file_name)
+            # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
+            cfd_data.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_NONE)
 
     if getattr(args,'scatterplot',None) is not None:
         output_filename = args.scatterplot.strip()
