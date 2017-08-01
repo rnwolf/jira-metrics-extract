@@ -537,6 +537,10 @@ class CycleTimeQueries(QueryManager):
             index=df.index
         )
 
+        # No history provided this thus we return dataframe with just column headers.
+        if size_history is None:
+            return df
+
         # Get a list of dates that a issue changed state
         state_changes_on_dates_set = set()
         for state in cycle_names:
@@ -576,7 +580,7 @@ class CycleTimeQueries(QueryManager):
                 if stacked:
                     df_filtered=keeprightmoststate(df_filtered)
 
-                if pointscolumn:
+                if pointscolumn and (size_history is not None):
 
                     # For debug
                     #if filterdate.isoformat() == '2016-11-22':

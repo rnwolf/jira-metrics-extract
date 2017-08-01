@@ -544,8 +544,11 @@ and so on).
 
 Changelog
 ---------
+0.45 - 1 Aug 2017
+     * Fixed bug in cycletime caused by routine trying to work with size history when specifying via flag that no history is to be retrived from Jira.
+
 0.45 - 30 July 2017
-     * Added the start of testing. 
+     * Added the start of testing.
      * Use issue Created date in first issue cycle 'Open' if skipped.
      * Added cli parameter to set jira username and password to blank strings. Useful for testing.
 

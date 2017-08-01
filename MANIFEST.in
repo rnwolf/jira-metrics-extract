@@ -1,4 +1,6 @@
 include *.txt
 include *.yaml
 include *.yml
+recursive-include tests *.py
+recursive-include tests *.yaml
 include Dockerfile

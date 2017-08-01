@@ -1,8 +1,8 @@
 # How to connect to JIRA?
 Connection:
-    Domain: https://jira.atlassian.com
-    #Username: myusername # If missing or and not in an environment var, you will be prompted at runtime
-    #Password: secret     # If missing or and not in an environment var, you will be prompted at runtime
+    domain: https://jira.atlassian.com
+    #username: myusername # If missing or and not in an environment var, you will be prompted at runtime
+    #password: secret     # If missing or and not in an environment var, you will be prompted at runtime
 
 Criteria:
     Project:
