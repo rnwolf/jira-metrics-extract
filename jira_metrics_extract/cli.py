@@ -63,6 +63,7 @@ def create_argument_parser():
     parser.add_argument('--done-column', metavar='<name>', help="Name of the 'done' column. Defaults to the last column.")
     parser.add_argument('--throughput-window', metavar='60', type=int, default=60, help="How many days in the past to use for calculating throughput")
     parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window.")
+    parser.add_argument('--separator', metavar='tab|comma', help="Separator to be used when output format is csv (default tab)")
 
     if charting.HAVE_CHARTING:
 
@@ -192,6 +193,8 @@ def main(argv=None):
         options['settings']['charts_to'] = args.charts_to
 
     output_format = args.format.lower() if args.format is not None else 'csv'
+    output_separator = '\t' # Default separator is \t
+    output_separator = ',' if args.output_separator is not None and args.output_separator.lower() == 'comma'
 
     throughput_window_end = parse_relative_date(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
     throughput_window_days = args.throughput_window
@@ -216,7 +219,7 @@ def main(argv=None):
         if args.points and args.changelog:
             print("Working out size changes of issues over time")
             df_size_history = q.size_history(size_data)
-            df_size_history.to_csv(r'size_history.csv', sep='\t', encoding='utf-8')  # Save to file.
+            df_size_history.to_csv(r'size_history.csv', sep=output_separator, encoding='utf-8')  # Save to file.
         else:
             df_size_history = None
     except JIRAError as e:
@@ -224,7 +227,7 @@ def main(argv=None):
         return 1
 
     if args.links:
-        edges_data.to_csv(args.links, sep='\t', index=False,encoding='utf-8')
+        edges_data.to_csv(args.links, sep=output_separator, index=False,encoding='utf-8')
 
     #cfd_data = q.cfd(cycle_data)
     print("Working out CFD data")
@@ -333,7 +336,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
-            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep='\t', encoding='utf-8')
+            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep=output_separator, encoding='utf-8')
 
     if args.records:
         if output_format == 'json':
@@ -352,7 +355,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             size_data.to_excel(output_filename, 'SIZES')
         else:
-            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep='\t', date_format='%Y-%m-%d', encoding='utf-8')
+            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep=output_separator, date_format='%Y-%m-%d', encoding='utf-8')
 
     if getattr(args,'cfd',None) is not None:
         output_filename = args.cfd.strip()
@@ -362,7 +365,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             cfd_data.to_excel(output_filename, 'CFD')
         else:
-            cfd_data.to_csv(output_filename, sep='\t', encoding='utf-8')
+            cfd_data.to_csv(output_filename, sep=output_separator, encoding='utf-8')
 
         # Write to disk which is great for debugging and for printing via other external methods
         base_filename=os.path.splitext(os.path.basename(output_filename))[0]
@@ -370,12 +373,12 @@ def main(argv=None):
             file_name = "stacked_" + base_filename + '.tsv'
             print("Writing stacked Cumulative Flow Diagram data to ", file_name)
             # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-            cfd_data_stackable.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_NONE)
+            cfd_data_stackable.to_csv(file_name, sep=output_separator, encoding='utf-8', quoting=csv.QUOTE_NONE)
         if cfd_data.size > 1:
             file_name = "unstacked_" + base_filename+ '.tsv'
             print("Writing unstacked Cumulative Flow Diagram data to ", file_name)
             # quoting = csv.QUOTE_MINIMAL, csv.QUOTE_ALL, csv.QUOTE_NONE, and csv.QUOTE_NONNUMERIC
-            cfd_data.to_csv(file_name, sep='\t', encoding='utf-8', quoting=csv.QUOTE_NONE)
+            cfd_data.to_csv(file_name, sep=output_separator, encoding='utf-8', quoting=csv.QUOTE_NONE)
 
     if getattr(args,'scatterplot',None) is not None:
         output_filename = args.scatterplot.strip()
@@ -385,7 +388,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             scatter_data.to_excel(output_filename, 'Scatter', index=False)
         else:
-            scatter_data.to_csv(output_filename, index=False, sep='\t', encoding='utf-8')
+            scatter_data.to_csv(output_filename, index=False, sep=output_separator, encoding='utf-8')
 
     if getattr(args,'percentiles',None) is not None:
         output_filename = args.percentiles.strip()
@@ -395,7 +398,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             percentile_data.to_frame(name='percentiles').to_excel(output_filename, 'Percentiles', header=True)
         else:
-            percentile_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8')
+            percentile_data.to_csv(output_filename, header=True, sep=output_separator, encoding='utf-8')
 
     if getattr(args,'histogram',None) is not None:
         output_filename = args.histogram.strip()
@@ -405,7 +408,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             histogram_data.to_frame(name='histogram').to_excel(args.histogram, 'Histogram', header=True)
         else:
-            histogram_data.to_csv(args.histogram, header=True, sep='\t', encoding='utf-8')
+            histogram_data.to_csv(args.histogram, header=True, sep=output_separator, encoding='utf-8')
 
     if getattr(args,'throughput',None) is not None:
         output_filename = args.throughput.strip()
@@ -415,7 +418,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             daily_throughput_data.to_excel(args.throughput, 'Throughput', header=True)
         else:
-            daily_throughput_data.to_csv(args.throughput, header=True, sep='\t', encoding='utf-8')
+            daily_throughput_data.to_csv(args.throughput, header=True, sep=output_separator, encoding='utf-8')
 
     if (getattr(args,'burnup_forecast',None) is not None ) and (burnup_forecast_data is not None):
         output_filename = args.burnup_forecast.strip()
@@ -425,7 +428,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             burnup_forecast_data.to_excel(output_filename, 'Forecast', header=True)
         else:
-            burnup_forecast_data.to_csv(output_filename, header=True, sep='\t', encoding='utf-8', index=False)
+            burnup_forecast_data.to_csv(output_filename, header=True, sep=output_separator, encoding='utf-8', index=False)
 
 
     # Output charts (if we have the right things installed)
