@@ -194,7 +194,7 @@ def main(argv=None):
 
     output_format = args.format.lower() if args.format is not None else 'csv'
     output_separator = '\t' # Default separator is \t
-    output_separator = ',' if (args.separator is not None and args.separator.lower()) == 'comma' else '\t'
+    output_separator = ',' if (args.separator is not None and args.separator.lower() == 'comma') else '\t'
 
     throughput_window_end = parse_relative_date(args.throughput_window_end) if args.throughput_window_end else datetime.date.today()
     throughput_window_days = args.throughput_window
