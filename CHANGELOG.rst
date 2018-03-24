@@ -1,6 +1,6 @@
 Changelog
 ---------
-0.46 - 24 March 2018
+0.47 (2018-03-24)
      * Split out change log into CHANGELOG.rst from the README.rst file.
      * Split CHANGELOG.rst out from the README.rst file.
 
