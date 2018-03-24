@@ -1,5 +1,11 @@
 Changelog
 ---------
+0.46 - 24 March 2018
+     * Split out change log into CHANGELOG.rst from the README.rst file.
+     * Split CHANGELOG.rst out from the README.rst file.
+
+     * Added zip_safe=Flase to the setup.py file.
+
 0.45 - 1 Aug 2017
      * Fixed bug in cycletime caused by routine trying to work with size history when specifying via flag that no history is to be retrived from Jira.
 

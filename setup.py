@@ -55,4 +55,5 @@ setup(
             'jira-metrics-extract=jira_metrics_extract.cli:main',
         ],
     },
+    zip_safe= False,
 )
