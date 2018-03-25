@@ -1,6 +1,6 @@
 Changelog
 ---------
-0.50 (unreleased)
+0.50 (2018-03-25)
                  
 
      * Fix text and spacing in CHANGELOG.rst
