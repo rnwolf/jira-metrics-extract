@@ -3,6 +3,8 @@ Changelog
 0.50 (unreleased)
                  
 
+     * Update setup.py so that download_url is based on version variable.
+
 - Nothing changed yet.
 
 
