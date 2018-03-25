@@ -3,9 +3,9 @@ Changelog
 0.50 (unreleased)
                  
 
-     * Update setup.py so that download_url is based on version variable.
+     * Fix text and spacing in CHANGELOG.rst
 
-- Nothing changed yet.
+     * Update setup.py so that download_url is based on version variable.
 
 
 0.49 (unreleased)
