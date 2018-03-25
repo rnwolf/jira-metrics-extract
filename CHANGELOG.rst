@@ -1,5 +1,11 @@
 Changelog
 ---------
+0.49 (unreleased)
+                 
+
+- Nothing changed yet.
+
+
 0.48 (unreleased)
                  
 
