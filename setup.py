@@ -7,16 +7,16 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
-
+version = '0.48.dev0'
 setup(
     name='jira-metrics-extract',
-    version='0.47',
     description='Extract agile metrics data from JIRA',
     long_description=long_description,
     author='Rudiger Wolf',
     author_email='rudiger.wolf@throughputfocus.com',
     url='https://github.com/rnwolf/jira-metrics-extract',
-    download_url = 'https://github.com/rnwolf/jira-metrics-extract/tarball/0.46',
+    version=version,
+    download_url = 'https://github.com/rnwolf/jira-metrics-extract/archive/{0}.tar.gz".format(version),',
     license='MIT',
     keywords='agile metrics jira analytics kanban cfd',
     classifiers=[
