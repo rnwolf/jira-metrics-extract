@@ -1,5 +1,11 @@
 Changelog
 ---------
+0.52 (unreleased)
+                 
+
+- Nothing changed yet.
+
+
 0.51 (2018-04-22)
                  
 
