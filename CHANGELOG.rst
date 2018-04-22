@@ -1,10 +1,8 @@
 Changelog
 ---------
-0.52 (unreleased)
+0.52 (2018-04-22)
                  
-
-- Nothing changed yet.
-
+    * Added seperator option in order to be able to use Tab(Default) or Comma.
 
 0.51 (2018-04-22)
                  
