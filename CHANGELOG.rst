@@ -3,6 +3,10 @@ Changelog
 0.51 (unreleased)
                  
 
+     * Fixed a number of issues.
+
+     * Fixed a number of issues.
+
 - Nothing changed yet.
 
 
