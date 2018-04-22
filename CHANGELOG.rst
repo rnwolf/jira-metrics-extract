@@ -1,16 +1,13 @@
 Changelog
 ---------
-0.51 (unreleased)
+0.51 (2018-04-22)
                  
 
      * Added manifest entry for test output file.
-
-     * Fixed a number of issues.
-
-     * Fixed a number of issues.
-
-- Nothing changed yet.
-
+     * Fixed tests to that issues sized in StoryPoints work.
+     * Fixed code that works out size of issues when calculating CFD data. Impact was that issues that never made change to size were recorded as zero points.
+     * Added the Jira LinkID to the extracted data file, as this can be used to manipulate links via API.
+     * When charts_from and charts_to command-line parameters are used the CFD data is filtered to the time range.
 
 0.50 (2018-03-25)
                  
