@@ -4,4 +4,5 @@ include *.yaml
 include *.yml
 recursive-include tests *.py
 recursive-include tests *.yaml
+recursive-include tests *.csv
 include Dockerfile
