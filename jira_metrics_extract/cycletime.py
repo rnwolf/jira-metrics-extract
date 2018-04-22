@@ -215,9 +215,9 @@ class CycleTimeQueries(QueryManager):
                         outwardissue = link.outwardIssue.key
 
                     if inwardissue is not None:
-                        data = {'Source':inwardissue, 'Target':issue.key, 'InwardLink':link.type.inward, 'OutwardLink': link.type.outward, 'LinkType':link.type.name}
+                        data = {'LinkID':link.id,'Source':inwardissue, 'Target':issue.key, 'InwardLink':link.type.inward, 'OutwardLink': link.type.outward, 'LinkType':link.type.name}
                     else:
-                        data = {'Source':issue.key, 'Target': outwardissue, 'InwardLink':link.type.inward, 'OutwardLink':link.type.outward, 'LinkType':link.type.name}
+                        data = {'LinkID':link.id,'Source':issue.key, 'Target': outwardissue, 'InwardLink':link.type.inward, 'OutwardLink':link.type.outward, 'LinkType':link.type.name}
                     edges.append(data)
 
                 if len(edges)>0:
@@ -229,13 +229,14 @@ class CycleTimeQueries(QueryManager):
                     else:
                         df_links = pd.DataFrame(edges)
                         df_edges=df_edges.append(df_links)  # = pd.DataFrame(edges)
-                # Got all the relationships for this iisue
+                # Got all the relationships for this issue
 
                 rows = []
                 try:
                     for snapshot in self.iter_size_changes(issue):
                         data= {'key':snapshot.key,'fromDate':snapshot.date,'size':snapshot.size}
                         rows.append(data)
+
                     df = pd.DataFrame(rows)
                     # Create the toDate column
                     df_toDate=df['fromDate'].shift(-1)
@@ -337,7 +338,7 @@ class CycleTimeQueries(QueryManager):
             # print('Not found')
             df_edges = pd.DataFrame()
         try:
-            df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType']] # Specify dataframe sort order
+            df_edges = df_edges[['Source', 'OutwardLink', 'Target', 'InwardLink','LinkType','LinkID']] # Specify dataframe sort order
             #df_edges.to_csv("myedges.csv", sep='\t', index=False,encoding='utf-8')
         except KeyError:
             print('Info: No issue edges found.')
@@ -565,7 +566,7 @@ class CycleTimeQueries(QueryManager):
         df_results = pd.DataFrame()
         # For each date on which we had a issue state change we want to count and sum the totals for each of the given states
         # 'Open','Analysis','Backlog','In Process','Done','Withdrawn'
-        timenowstr = datetime.datetime.now().strftime('-run-%H-%M-%S')
+        timenowstr = datetime.datetime.now().strftime('-run-%Y-%m-%d_%H-%M-%S')
         for date_index,statechangedate in enumerate(state_changes_on_dates):
             if date_index%10 == 0: # Print out Progress every tenth
                 pass #print("CFD state change {} of {} ".format(date_index,len(state_changes_on_dates)))

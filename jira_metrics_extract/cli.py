@@ -434,14 +434,29 @@ def main(argv=None):
         charts_from = parse_relative_date(options['settings']['charts_from']) if options['settings']['charts_from'] is not None else None
         charts_to = parse_relative_date(options['settings']['charts_to']) if options['settings']['charts_to'] is not None else None
 
-        cycle_data_sliced = cycle_data
+        cycle_data_sliced = cycle_data # Default
         if charts_from is not None:
             cycle_data_sliced = cycle_data[cycle_data['completed_timestamp'] >= charts_from]
         if charts_to is not None:
             cycle_data_sliced = cycle_data[cycle_data['completed_timestamp'] <= charts_to]
 
-        cfd_data_sliced = cfd_data[slice(charts_from, charts_to)]
-        cfd_data_stackable_sliced = cfd_data_stackable[slice(charts_from, charts_to)]
+        if charts_from is not None and charts_to is None:
+            charts_to = pd.datetime.now() # If no upper limit for is provided assume that we can use now as the max value.
+
+        cfd_data_sliced = cfd_data # default, overwrite if date filters exist below if required.
+        cfd_data_stackable_sliced = cfd_data_stackable # default, overwrite if date filters exist below if required.
+        #cfd_data_sliced = cfd_data[slice(charts_from, charts_to)]
+        #cfd_data_stackable_sliced = cfd_data_stackable[slice(charts_from, charts_to)]
+        if charts_from and charts_to is not None:
+            if args.points:
+                # When we use points then the dataframe has a datetime index we need to use to filter rows.
+                cfd_data_sliced= cfd_data[(cfd_data.index >= charts_from) & (cfd_data.index <= charts_to)]
+                cfd_data_stackable_sliced = cfd_data_stackable[(cfd_data_stackable.index >= charts_from) & (cfd_data_stackable.index <= charts_to)]
+            else:
+                # When we use count issues(rows) then the dataframe used the first column to rows.
+                cfd_data_sliced= cfd_data[(cfd_data.iloc[:, 0] >= charts_from) & (cfd_data.iloc[:, 0] <= charts_to)]
+                cfd_data_stackable_sliced = cfd_data_stackable[(cfd_data_stackable.iloc[:, 0] >= charts_from) & (cfd_data_stackable.iloc[:, 0] < charts_to)]
+
 
         charting.set_context()
 

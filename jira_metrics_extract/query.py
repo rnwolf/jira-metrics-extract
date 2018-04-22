@@ -139,7 +139,16 @@ class QueryManager(object):
                                        itertools.chain.from_iterable([c.items for c in issue.changelog.histories])))
         except AttributeError:
             return
-        size = (size_changes[0].fromString) if len(size_changes) > 0 else None
+
+        # If we have no size changes and the issue has a current size then a size must have ben specified at issue creation time.
+        # Return the size at creation time
+
+        try:
+            current_size = issue.fields.__dict__[self.fields['StoryPoints']]
+        except:
+            current_size = None
+
+        size = (size_changes[0].fromString) if len(size_changes)  else current_size
 
         # Issue was created
         yield IssueSizeSnapshot(
