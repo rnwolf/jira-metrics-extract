@@ -3,6 +3,8 @@ Changelog
 0.51 (unreleased)
                  
 
+     * Added manifest entry for test output file.
+
      * Fixed a number of issues.
 
      * Fixed a number of issues.
