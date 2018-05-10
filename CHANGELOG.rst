@@ -1,6 +1,6 @@
 Changelog
 ---------
-0.52 (2018-04-22)
+0.52 (2018-05-10)
                  
      * Add file with expected test results.
 
