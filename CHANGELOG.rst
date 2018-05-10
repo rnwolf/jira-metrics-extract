@@ -1,6 +1,6 @@
 Changelog
 ---------
-0.53 (unreleased)
+0.53 (2018-05-10)
                  
 
 - Nothing changed yet.
