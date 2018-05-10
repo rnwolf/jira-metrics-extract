@@ -2,6 +2,8 @@ Changelog
 ---------
 0.52 (2018-04-22)
                  
+     * Add file with expected test results.
+
      * Updated testing and if child values exist for a Jira field retrive them and concatinate to result.
 
     * Added seperator option in order to be able to use Tab(Default) or Comma.
