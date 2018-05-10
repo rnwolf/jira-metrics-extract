@@ -2,12 +2,12 @@ cycler
 et-xmlfile
 jdcal
 jira
--e git+https://github.com/rnwolf/jira-metrics-extract.git#egg=jira_metrics_extract
+jira-metrics-extract
 matplotlib
 numpy
 oauthlib
 openpyxl
-pandas
+pandas==0.20.3
 patsy
 pydicti
 pyparsing
@@ -22,5 +22,6 @@ seaborn
 six
 statsmodels
 tlslite
-dateparser
+dateparser==0.6.0
 future
+

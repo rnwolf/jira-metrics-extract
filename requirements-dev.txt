@@ -1,0 +1,2 @@
+tdda==0.5.16
+-e git+ssh://git@github.com/rnwolf/jira-metrics-extract.git#egg=jira_metrics_extract

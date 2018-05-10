@@ -99,6 +99,13 @@ class QueryManager(object):
             return None
 
         value = getattr(field_value, 'value', field_value)
+        try:
+            child=field_value.child.value
+        except:
+            child = None
+        if child:
+            if isinstance(value, (basestring)):
+                value = value + "|"+child
 
         if isinstance(value, (list, tuple)):
             if len(value) == 0:
