@@ -64,6 +64,8 @@ def create_argument_parser():
     parser.add_argument('--throughput-window', metavar='60', type=int, default=60, help="How many days in the past to use for calculating throughput")
     parser.add_argument('--throughput-window-end', metavar=datetime.date.today().isoformat(), help="By default, the throughput window runs to today's date. Use this option to set an alternative end date for the window.")
     parser.add_argument('--separator', metavar='tab|comma', help="Separator to be used when output format is csv (default tab)")
+    parser.add_argument('--dateFormat',help="Format to be used for the Date Time Format (default is %%Y-%%m-%%d)")
+
 
     if charting.HAVE_CHARTING:
 
@@ -121,13 +123,13 @@ def get_jira_client(connection):
     print("Connecting to ", url)
 
     if username is None:
-        # Fix Python 2.x. raw_input replaced by input in Python 3.x 
+        # Fix Python 2.x. raw_input replaced by input in Python 3.x
         try:
             username = raw_input("Enter Username: ")
         except NameError:
             username = input("Enter username: ")
         except:
-            username = getpass.getuser() #Get OS username as as fallback 
+            username = getpass.getuser() #Get OS username as as fallback
             print('No username provided, using username: ' + username)
 
     if password is None:
@@ -176,6 +178,10 @@ def main(argv=None):
 
     if args.max_results is not None:
         options['settings']['max_results'] = args.max_results
+
+    if args.dateFormat is not None:
+        options['settings']['dateFormat'] = args.dateFormat
+
 
     if getattr(args,'quantiles',None) is not None:
         try:
@@ -226,6 +232,7 @@ def main(argv=None):
         eprint(e)
         return 1
 
+
     if args.links:
         edges_data.to_csv(args.links, sep=output_separator, index=False,encoding='utf-8')
 
@@ -268,7 +275,6 @@ def main(argv=None):
                 backlog_column = key
     else:
         try:
-
             backlog_column = args.backlog_column or cfd_data.columns[0].replace('Sized', '')
             committed_column = args.committed_column or cfd_data.columns[1].replace('Sized', '')
             final_column = args.final_column or cfd_data.columns[-2].replace('Sized', '')
@@ -336,7 +342,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             cycle_data.to_excel(args.output, 'Cycle data', columns=columns, header=header, index=False)
         else:
-            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format='%Y-%m-%d', index=False, sep=output_separator, encoding='utf-8')
+            cycle_data.to_csv(output_filename, columns=columns, header=header, date_format=options['settings']['dateFormat'], index=False, sep=output_separator, encoding='utf-8')
 
     if args.records:
         if output_format == 'json':
@@ -355,7 +361,7 @@ def main(argv=None):
         elif output_format == 'xlsx':
             size_data.to_excel(output_filename, 'SIZES')
         else:
-            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep=output_separator, date_format='%Y-%m-%d', encoding='utf-8')
+            size_data.to_csv(output_filename, columns=['key','fromDate','toDate','size'], sep=output_separator, date_format=options['settings']['dateFormat'], encoding='utf-8')
 
     if getattr(args,'cfd',None) is not None:
         output_filename = args.cfd.strip()
