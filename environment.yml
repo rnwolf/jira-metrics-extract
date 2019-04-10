@@ -9,9 +9,9 @@ dependencies:
 - scipy
 - seaborn
 - statsmodels
+- xlsxwriter
 - pip:
   - dateparser==0.6.0
   - jira==1.0.7
   - jira_metrics_extract
   - html2text
-  
