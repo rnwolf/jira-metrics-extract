@@ -1,7 +1,9 @@
-html2textname: jira-metrics2
+# run: conda env create --file environment.yml
+name: jira-metrics2
 channels: !!python/tuple
 - defaults
 dependencies:
+- pip
 - matplotlib <3.0
 - numpy
 - pandas==0.20.3
