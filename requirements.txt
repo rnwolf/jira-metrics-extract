@@ -9,7 +9,7 @@ oauthlib==3.1.0
 openpyxl==3.0.0
 pandas==0.25.1
 patsy==0.5.1
-pydicti
+pydicti==1.1.1
 pyparsing
 python-dateutil
 pytz
