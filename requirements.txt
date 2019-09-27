@@ -23,5 +23,5 @@ six==1.12.0
 statsmodels==0.10.1
 tlslite==0.4.9
 dateparser==0.7.2
-future
+future==0.17.1
 
