@@ -1,5 +1,5 @@
 cycler==0.10.0
-et-xmlfile
+et-xmlfile==1.0.1
 jdcal
 jira
 jira-metrics-extract
