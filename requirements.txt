@@ -10,7 +10,7 @@ openpyxl==3.0.0
 pandas==0.25.1
 patsy==0.5.1
 pydicti==1.1.1
-pyparsing
+pyparsing==2.4.2
 python-dateutil
 pytz
 PyYAML
