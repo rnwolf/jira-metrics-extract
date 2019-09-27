@@ -12,7 +12,7 @@ patsy==0.5.1
 pydicti==1.1.1
 pyparsing==2.4.2
 python-dateutil==2.8.0
-pytz
+pytz==2019.2
 PyYAML
 requests
 requests-oauthlib
