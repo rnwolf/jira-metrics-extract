@@ -5,7 +5,7 @@ jira==2.0.0
 jira-metrics-extract==0.53
 matplotlib==3.1.1
 numpy==1.17.2
-oauthlib
+oauthlib==3.1.0
 openpyxl
 pandas==0.20.3
 patsy
