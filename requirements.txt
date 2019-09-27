@@ -16,7 +16,7 @@ pytz==2019.2
 PyYAML==5.1.2
 requests==2.22.0
 requests-oauthlib==1.2.0
-requests-toolbelt
+requests-toolbelt==0.9.1
 scipy
 seaborn
 six
