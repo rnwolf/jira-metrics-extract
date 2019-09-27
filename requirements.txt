@@ -1,7 +1,7 @@
 cycler==0.10.0
 et-xmlfile==1.0.1
 jdcal==1.4.1
-jira
+jira==2.0.0
 jira-metrics-extract
 matplotlib
 numpy
