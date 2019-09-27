@@ -22,6 +22,6 @@ seaborn==0.9.0
 six==1.12.0
 statsmodels==0.10.1
 tlslite==0.4.9
-dateparser==0.6.0
+dateparser==0.7.2
 future
 
