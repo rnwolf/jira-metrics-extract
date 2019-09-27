@@ -1,4 +1,4 @@
-cycler
+cycler==0.10.0
 et-xmlfile
 jdcal
 jira
