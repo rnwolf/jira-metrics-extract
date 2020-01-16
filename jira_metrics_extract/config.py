@@ -46,7 +46,8 @@ def config_to_options(data):
             'max_results': 500,
             'quantiles': [0.3, 0.5, 0.75, 0.85, 0.95],
             'charts_from': None,
-            'charts_to': None
+            'charts_to': None,
+            'dateFormat' :'%Y-%m-%d'
         }
     }
 
@@ -141,5 +142,7 @@ def config_to_options(data):
         options['settings']['charts_from'] = config['charts from']
     if 'charts to' in config:
         options['settings']['charts_to'] = config['charts to']
+    if 'dateFormat' in config:
+        options['settings']['dateFormat'] = config['dateFormat']
 
     return options
